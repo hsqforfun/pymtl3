@@ -1,3 +1,8 @@
+#-------------------------------------------------------
+# SystemVerilogTranslationPass
+# This pass takes the top module of a PyMTL component
+# and translates it into SystemVerilog.
+#-------------------------------------------------------
 from pymtl                import *
 from pymtl.model          import ComponentLevel1
 from BasePass             import BasePass
@@ -13,8 +18,9 @@ class SystemVerilogTranslationPass( BasePass ):
     model_name            = top.__class__.__name__
     systemverilog_file    = model_name + '.sv'
 
-    # Get all modules in the component hierarchy and translate the 
-    # deepest component first
+    # Get all modules in the component hierarchy and analyze all
+    # reader-writer relations. These are needed to generate the
+    # continuous assignment statements.
 
     nets = top.get_all_nets()
     adjs = top.get_signal_adjacency_dict()
@@ -38,6 +44,14 @@ class SystemVerilogTranslationPass( BasePass ):
             reader_host         = v.get_host_component()
             reader_host_parent  = reader_host.get_parent_object()
 
+            # Four possible cases for the reader and writer signals:
+            # 1.   They have the same host component. Both need 
+            #       to be added to the host component.
+            # 2/3. One's host component is the parent of the other.
+            #       Both need to be added to the parent component.
+            # 4.   They have the same parent component.
+            #       Both need to be added to the parent component.
+
             if writer_host is reader_host:
               connections_self_self[ writer_host ].add( ( u, v ) )
 
@@ -52,11 +66,15 @@ class SystemVerilogTranslationPass( BasePass ):
 
             else: assert False
 
+    # Recursively translate the top component
+
     ret = ComponentTranslationPass( 
           connections_self_self, 
           connections_self_self,
           connections_child_child
         )( top )
+
+    # Write output directly to a file
 
     with open( systemverilog_file, 'w' ) as sv_out_file:
       sv_out_file.write( ret )
