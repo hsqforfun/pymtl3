@@ -11,6 +11,13 @@ SimpleSim = [
   Component.lock_in_simulation
 ]
 
+SimpleSimNoElaboration = [
+  GenDAGPass(),
+  SimpleSchedPass(),
+  SimpleTickPass(),
+  RTLComponent.lock_in_simulation
+]
+
 SimpleCLSim = [
   Component.elaborate,
   GenDAGPass(),
