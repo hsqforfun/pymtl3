@@ -1,11 +1,11 @@
 from pymtl import *
 from pclib.rtl import Adder, Subtractor, Mux, BypassQueue1RTL
-from pymtl.passes.SystemSystemVerilogTranslationPass import SystemSystemVerilogTranslationPass
+from pymtl.passes.SystemVerilogTranslationPass import SystemVerilogTranslationPass
 
 def test_adder():
   m = Adder( Bits32 )
   m.elaborate()
-  SystemSystemVerilogTranslationPass()( m )
+  SystemVerilogTranslationPass()( m )
 
 def test_wrapped_noconnect_adder():
 
