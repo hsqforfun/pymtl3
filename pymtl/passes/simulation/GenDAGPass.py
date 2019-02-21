@@ -7,11 +7,12 @@
 # Author : Shunning Jiang
 # Date   : Jan 18, 2018
 
-from pymtl import *
-from BasePass import BasePass, PassMetadata
-from pymtl.dsl import Const
 import py, ast
-from collections import defaultdict
+from collections  import defaultdict
+
+from pymtl        import *
+from pymtl.dsl    import Const
+from pymtl.passes import BasePass, PassMetadata
 
 class GenDAGPass( BasePass ):
 
