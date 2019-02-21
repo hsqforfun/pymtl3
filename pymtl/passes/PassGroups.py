@@ -1,7 +1,11 @@
-from pymtl import *
-from GenDAGPass import GenDAGPass
-from SimpleSchedPass import SimpleSchedPass
-from SimpleTickPass import SimpleTickPass
+from pymtl      import *
+from simulation import GenDAGPass
+from simulation import SimpleSchedPass
+from simulation import SimpleTickPass 
+
+#-------------------------------------------------------------------------
+# SimpleSim
+#-------------------------------------------------------------------------
 
 SimpleSim = [
   Component.elaborate,
@@ -10,6 +14,10 @@ SimpleSim = [
   SimpleTickPass(),
   Component.lock_in_simulation
 ]
+
+#-------------------------------------------------------------------------
+# SimpleSchedDumpDAG
+#-------------------------------------------------------------------------
 
 def SimpleSchedDumpDAGPass():
   def currying( top ):
@@ -24,12 +32,20 @@ SimpleSimDumpDAG = [
   RTLComponent.lock_in_simulation
 ]
 
+#-------------------------------------------------------------------------
+# SimpleSimNoElaboration
+#-------------------------------------------------------------------------
+
 SimpleSimNoElaboration = [
   GenDAGPass(),
   SimpleSchedPass(),
   SimpleTickPass(),
   RTLComponent.lock_in_simulation
 ]
+
+#-------------------------------------------------------------------------
+# SimpleCLSim
+#-------------------------------------------------------------------------
 
 SimpleCLSim = [
   Component.elaborate,
@@ -38,6 +54,10 @@ SimpleCLSim = [
   SimpleTickPass(),
   Component.lock_in_simulation
 ]
+
+#-------------------------------------------------------------------------
+# UnrollSim
+#-------------------------------------------------------------------------
 
 from mamba.UnrollTickPass import UnrollTickPass
 UnrollSim = [
@@ -48,6 +68,10 @@ UnrollSim = [
   Component.lock_in_simulation
 ]
 
+#-------------------------------------------------------------------------
+# HeuTopoUnrollSim
+#-------------------------------------------------------------------------
+
 from mamba.HeuristicTopoPass import HeuristicTopoPass
 HeuTopoUnrollSim = [
   Component.elaborate,
@@ -56,6 +80,10 @@ HeuTopoUnrollSim = [
   UnrollTickPass(),
   Component.lock_in_simulation
 ]
+
+#-------------------------------------------------------------------------
+# TraceBreakingSim
+#-------------------------------------------------------------------------
 
 from mamba.TraceBreakingSchedTickPass import TraceBreakingSchedTickPass
 TraceBreakingSim = [
