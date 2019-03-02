@@ -213,6 +213,64 @@ def test_regincr_n_stage():
   run_translation_test( m, test_vec )
 
 #-------------------------------------------------------------------------
+# test_cbatten_slicing
+#-------------------------------------------------------------------------
+# Trying out writing a little translation test
+
+class TestBasicSlice1( RTLComponent ):
+  def construct( s ):
+    s.in_ = InVPort (Bits3)
+    s.out = OutVPort(Bits3)
+    s.connect( s.out[0], s.in_[0] )
+    s.connect( s.out[1], s.in_[1] )
+    s.connect( s.out[2], s.in_[2] )
+
+class TestBasicSlice2( RTLComponent ):
+  def construct( s ):
+    s.in_ = InVPort (Bits3)
+    s.out = OutVPort(Bits3)
+    s.connect( s.out[0:1], s.in_[0:1] )
+    s.connect( s.out[1:2], s.in_[1:2] )
+    s.connect( s.out[2:3], s.in_[2:3] )
+
+class TestBasicSlice3( RTLComponent ):
+  def construct( s ):
+    s.in_ = InVPort (Bits3)
+    s.out = OutVPort(Bits3)
+    s.connect( s.out[0:2], s.in_[0:2] )
+    s.connect( s.out[2],   s.in_[2]   )
+
+class TestBasicSlice4( RTLComponent ):
+  def construct( s ):
+    s.in_ = InVPort (Bits3)
+    s.out = OutVPort(Bits3)
+    s.connect( s.out[0],   s.in_[0]   )
+    s.connect( s.out[1:3], s.in_[1:3] )
+
+class TestBasicSlice5( RTLComponent ):
+  def construct( s ):
+    s.in_ = InVPort (Bits3)
+    s.out = OutVPort(Bits3)
+    s.connect( s.out[0:3], s.in_[0:3] )
+
+@pytest.mark.parametrize("TestSliceN", [
+  TestBasicSlice1, TestBasicSlice2, TestBasicSlice3,
+  TestBasicSlice4, TestBasicSlice5
+])
+def test_cbatten_slicing( TestSliceN ):
+  run_translation_test( TestSliceN(), [
+     'in_            *out',
+    [ Bits3(0b000), Bits3(0b000) ],
+    [ Bits3(0b001), Bits3(0b000) ],
+    [ Bits3(0b010), Bits3(0b000) ],
+    [ Bits3(0b011), Bits3(0b000) ],
+    [ Bits3(0b100), Bits3(0b000) ],
+    [ Bits3(0b101), Bits3(0b000) ],
+    [ Bits3(0b110), Bits3(0b000) ],
+    [ Bits3(0b111), Bits3(0b000) ],
+  ])
+
+#-------------------------------------------------------------------------
 # test_sort
 #-------------------------------------------------------------------------
 
