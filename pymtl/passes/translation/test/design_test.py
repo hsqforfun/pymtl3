@@ -3,7 +3,7 @@
 #=========================================================================
 # This file includes directed tests cases for the translation pass. Test
 # cases are mainly simple PRTL designs.
-# 
+#
 # Author : Peitian Pan
 # Date   : Feb 21, 2019
 
@@ -42,7 +42,7 @@ def test_mux():
 
   m = Mux( Bits32, 3 )
   test_vec = [
-       'in_[0]  in_[1]  in_[2]   sel     *out', 
+       'in_[0]  in_[1]  in_[2]   sel     *out',
     [ Bits32,  Bits32, Bits32, Bits2, Bits32 ],
 
     [      0,       1,      2,   0,       0  ],
@@ -128,7 +128,7 @@ def test_regincr_2stage():
       s.in_     = InVPort   ( width )
       s.out     = OutVPort  ( width )
 
-      s.reg1_out = Wire     ( width ) 
+      s.reg1_out = Wire     ( width )
 
       s.reg_incr0 = RegIncr( width )( in_ = s.in_, out = s.reg1_out )
       s.reg_incr1 = RegIncr( width )( in_ = s.reg1_out, out = s.out )
@@ -179,11 +179,11 @@ def test_regincr_n_stage():
 
       s.reg_out = [ Wire( width ) for x in xrange(nstages+1)]
 
-      s.reg_incrs = [ RegIncr( width )( in_ = s.reg_out[x], out = s.reg_out[x+1]) 
+      s.reg_incrs = [ RegIncr( width )( in_ = s.reg_out[x], out = s.reg_out[x+1])
         for x in xrange( nstages ) ]
 
       @s.update
-      def in_update(): 
+      def in_update():
         s.reg_out[0] = s.in_
 
       @s.update
@@ -217,7 +217,7 @@ def test_regincr_n_stage():
 #-------------------------------------------------------------------------
 
 def test_sort():
-  from pclib.rtl.registers import Reg, RegRst 
+  from pclib.rtl.registers import Reg, RegRst
 
   class MinMaxUnit( RTLComponent ):
     def construct( s, width ):
