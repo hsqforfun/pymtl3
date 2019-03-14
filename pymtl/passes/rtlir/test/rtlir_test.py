@@ -1,7 +1,7 @@
 #=========================================================================
-# rast_test.py
+# rtlir_test.py
 #=========================================================================
-# This file includes directed test cases for the RAST generation pass.
+# This file includes directed test cases for the RTLIR generation pass.
 #
 # Author : Peitian Pan
 # Date   : Feb 2, 2019
@@ -9,24 +9,24 @@
 import pytest
 
 from pymtl                             import *
-from pymtl.passes.rast.RAST            import *
-from pymtl.passes.rast.errors          import PyMTLTypeError
-from pymtl.passes.rast                 import ComponentUpblkRASTGenPass
+from pymtl.passes.rtlir.RTLIR          import *
+from pymtl.passes.rtlir.errors         import PyMTLTypeError
+from pymtl.passes.rtlir                import UpblkRTLIRGenPass
 from pymtl.passes.utility.test_utility import expected_failure, do_test
 
 #-------------------------------------------------------------------------
 # local_do_test
 #-------------------------------------------------------------------------
-# Verify that the generated RAST is the same as the manually generated
+# Verify that the generated RTLIR is the same as the manually generated
 # reference.
 
 def local_do_test( m ):
-  ref = m._rast_test_ref
+  ref = m._rtlir_test_ref
   m.elaborate()
-  ComponentUpblkRASTGenPass()( m )
+  UpblkRTLIRGenPass()( m )
 
   for blk in m.get_update_blocks():
-    assert m._pass_component_upblk_rast_gen.rast[ blk ] == ref[ blk.__name__ ]
+    assert m._pass_upblk_rtlir_gen.rtlir_upblks[ blk ] == ref[ blk.__name__ ]
 
 #-------------------------------------------------------------------------
 # test_index_basic
@@ -45,7 +45,7 @@ def test_index_basic( do_test ):
 
   a = index_basic()
 
-  a._rast_test_ref = { 'index_basic' : CombUpblk( 'index_basic', [
+  a._rtlir_test_ref = { 'index_basic' : CombUpblk( 'index_basic', [
     Assign( Index( Attribute( Base( a ), 'out' ), Number( 0 ) ),
       BinOp( Index( Attribute( Base( a ), 'in_' ), Number( 0 ) ), Add(),
              Index( Attribute( Base( a ), 'in_' ), Number( 1 ) ) ) ),
@@ -83,7 +83,7 @@ def test_mismatch_width_assign( do_test ):
 
     a = A()
 
-    a._rast_test_ref = { 'mismatch_width_assign' : CombUpblk(
+    a._rtlir_test_ref = { 'mismatch_width_assign' : CombUpblk(
       'mismatch_width_assign', [ Assign(
         Attribute( Base( a ), 'out' ), Attribute( Base( a ), 'in_' )
       )
@@ -119,7 +119,7 @@ def test_slicing_basic( do_test ):
 
   a = slicing_basic()
 
-  a._rast_test_ref = { 'slicing_basic' : CombUpblk( 'slicing_basic', [
+  a._rtlir_test_ref = { 'slicing_basic' : CombUpblk( 'slicing_basic', [
     Assign( Slice( Attribute( Base( a ), 'out' ), Number( 0 ), Number( 16 ) ),
       Slice( Attribute( Base( a ), 'in_' ), Number( 16 ), Number( 32 ) ) ),
     Assign( Slice( Attribute( Base( a ), 'out' ), Number( 16 ), Number( 32 ) ),
@@ -155,7 +155,7 @@ def test_bits_basic( do_test ):
 
   a = bits_basic()
 
-  a._rast_test_ref = { 'bits_basic' : CombUpblk( 'bits_basic', [
+  a._rtlir_test_ref = { 'bits_basic' : CombUpblk( 'bits_basic', [
     Assign( Attribute( Base( a ), 'out' ),
       BinOp( Attribute( Base( a ), 'in_' ), Add(), Bitwidth( 16, Number( 10 ) ) ) )
   ] ) }
@@ -189,7 +189,7 @@ def test_index_bits_slicing( do_test ):
 
   a = index_bits_slicing()
 
-  a._rast_test_ref = { 'index_bits_slicing' : CombUpblk( 'index_bits_slicing', [
+  a._rtlir_test_ref = { 'index_bits_slicing' : CombUpblk( 'index_bits_slicing', [
     Assign( Slice( 
       Index( Attribute( Base( a ), 'out' ), Number( 0 ) ),
       Number( 0 ), Number( 8 ) 
@@ -259,7 +259,7 @@ def test_multi_components( do_test ):
 
   a = multi_components_A()
 
-  a._rast_test_ref = { 'multi_components_A' : CombUpblk( 'multi_components_A', [
+  a._rtlir_test_ref = { 'multi_components_A' : CombUpblk( 'multi_components_A', [
     Assign( Attribute( Base( a ), 'out' ),
       BinOp(
         Attribute( Base( a ), 'in_' ),
@@ -300,7 +300,7 @@ def test_if_basic( do_test ):
 
   a = if_basic()
 
-  a._rast_test_ref = {
+  a._rtlir_test_ref = {
     'if_basic' : CombUpblk( 'if_basic', [ If(
       Compare( Slice( Attribute( Base( a ), 'in_' ), Number( 0 ), Number( 8 ) ), Eq(), Bitwidth( 8, Number( 255 ) ) ),
       [ Assign( Attribute( Base( a ), 'out' ), Slice( Attribute( Base( a ), 'in_' ), Number( 8 ), Number( 16 ) ) ) ],
@@ -337,7 +337,7 @@ def test_for_basic( do_test ):
 
   twice_i = BinOp( Number( 2 ), Mult(), LoopVar( 'i' ) )
 
-  a._rast_test_ref = {
+  a._rtlir_test_ref = {
     'for_basic' : CombUpblk( 'for_basic', [ For(
       LoopVarDecl( 'i' ), Number( 0 ), Number( 8 ), Number( 1 ),
       [ Assign(
@@ -377,7 +377,7 @@ def test_multi_upblks( do_test ):
 
   a = multi_upblks()
 
-  a._rast_test_ref = { 'multi_upblks_1' : CombUpblk( 'multi_upblks_1', [
+  a._rtlir_test_ref = { 'multi_upblks_1' : CombUpblk( 'multi_upblks_1', [
       Assign( Slice( Attribute( Base( a ), 'out' ), Number(0), Number(4) ), Attribute( Base( a ), 'in_' ) ),
     ] ),
     'multi_upblks_2' : CombUpblk( 'multi_upblks_2', [

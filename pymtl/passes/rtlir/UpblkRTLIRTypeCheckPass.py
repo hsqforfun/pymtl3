@@ -1,7 +1,7 @@
 #=========================================================================
-# ComponentUpblkRASTTypeCheckPass.py
+# UpblkRTLIRTypeCheckPass.py
 #=========================================================================
-# Perform type checking on all blocks' RAST for a given component. This
+# Perform type checking on all blocks' RTLIR for a given component. This
 # pass does not have a namespace to write to because it only throws an
 # exception when a type error is detected.
 #
@@ -13,41 +13,45 @@ from pymtl.passes                      import BasePass, PassMetadata
 from pymtl.passes.utility.pass_utility import freeze
 
 from errors                            import PyMTLTypeError
-from RAST                              import *
-from RASTType                          import *
+from RTLIR                             import *
+from RTLIRType                         import *
 
-class ComponentUpblkRASTTypeCheckPass( BasePass ):
+class UpblkRTLIRTypeCheckPass( BasePass ):
   def __init__( s, type_env ):
     s.type_env = type_env
 
   def __call__( s, m ):
-    """perform type checking on all RAST in _rast"""
+    """perform type checking on all RTLIR in rtlir_upblks"""
 
-    if not hasattr( m, '_pass_component_upblk_rast_type_check' ):
-      m._pass_component_upblk_rast_type_check = PassMetadata()
+    if not hasattr( m, '_pass_upblk_rtlir_type_check' ):
+      m._pass_upblk_rtlir_type_check = PassMetadata()
 
-    visitor = UpblkRASTTypeCheckVisitor( m, s.type_env )
+    m._pass_upblk_rtlir_type_check.rtlir_freevars = {}
+    m._pass_upblk_rtlir_type_check.rtlir_tmpvars = {}
+
+    visitor = UpblkRTLIRTypeCheckVisitor(
+      m, s.type_env,
+      m._pass_upblk_rtlir_type_check.rtlir_freevars,
+      m._pass_upblk_rtlir_type_check.rtlir_tmpvars
+    )
 
     for blk in m.get_update_blocks():
-
-      visitor.enter( blk, m._pass_component_upblk_rast_gen.rast[ blk ] )
-
-    m._pass_component_upblk_rast_type_check.tmpvar_type_env =\
-      visitor.tmp_var_type_env
+      visitor.enter( blk, m._pass_upblk_rtlir_gen.rtlir_upblks[ blk ] )
 
 #-------------------------------------------------------------------------
-# UpblkRASTTypeCheckVisitor
+# UpblkRTLIRTypeCheckVisitor
 #-------------------------------------------------------------------------
-# Visitor that performs type checking on RAST
+# Visitor that performs type checking on RTLIR
 
-class UpblkRASTTypeCheckVisitor( RASTNodeVisitor ):
+class UpblkRTLIRTypeCheckVisitor( RTLIRNodeVisitor ):
 
-  def __init__( s, component, type_env ):
+  def __init__( s, component, type_env, freevars, tmpvars ):
     s.component = component
 
     s.type_env = type_env
 
-    s.tmp_var_type_env = {}
+    s.freevars = freevars
+    s.tmpvars = tmpvars
 
     s.BinOp_max_nbits = ( Add, Sub, Mult, Div, Mod, Pow, BitAnd, BitOr,
         BitXor )
@@ -55,7 +59,7 @@ class UpblkRASTTypeCheckVisitor( RASTNodeVisitor ):
     s.BinOp_left_nbits = ( ShiftLeft, ShiftRightLogic )
 
     #---------------------------------------------------------------------
-    # The expected evaluation result types for each type of RAST node
+    # The expected evaluation result types for each type of RTLIR node
     #---------------------------------------------------------------------
 
     s.type_expect = {}
@@ -110,8 +114,8 @@ class UpblkRASTTypeCheckVisitor( RASTNodeVisitor ):
 
     return eval( '{l}{op}{r}'.format( l = l, op = op_dict[ type(op) ], r = r ) )
 
-  def enter( s, blk, rast ):
-    """ entry point for RAST type checking """
+  def enter( s, blk, rtlir ):
+    """ entry point for RTLIR type checking """
     s.blk     = blk
 
     # s.globals contains a dict of the global namespace of the module where
@@ -131,7 +135,7 @@ class UpblkRASTTypeCheckVisitor( RASTNodeVisitor ):
     # import pdb
     # pdb.set_trace()
 
-    s.visit( rast )
+    s.visit( rtlir )
 
   # Override the default visit()
   def visit( s, node ):
@@ -144,9 +148,9 @@ class UpblkRASTTypeCheckVisitor( RASTNodeVisitor ):
       value = node.__dict__[ field ]
       if isinstance( value, list ):
         for item in value:
-          if isinstance( item, BaseRAST ):
+          if isinstance( item, BaseRTLIR ):
             s.visit( item )
-      elif isinstance( value, BaseRAST ):
+      elif isinstance( value, BaseRTLIR ):
         s.visit( value )
 
     # Then verify that all child nodes have desired types
@@ -185,7 +189,7 @@ class UpblkRASTTypeCheckVisitor( RASTNodeVisitor ):
     if isinstance( node.target, TmpVar ):
       # Creating a temporaray variable
       node.target.Type = rhs_type
-      s.tmp_var_type_env[ node.target.name ] = rhs_type
+      s.tmpvars[ node.target.name ] = rhs_type
 
     else:
       if not lhs_type( rhs_type ):
@@ -289,6 +293,9 @@ class UpblkRASTTypeCheckVisitor( RASTNodeVisitor ):
   #-----------------------------------------------------------------------
 
   def visit_FreeVar( s, node ):
+    if not node.name in s.freevars.keys():
+      s.freevars[ node.name ] = node.obj
+
     node.Type = get_type( node.obj )
 
   #-----------------------------------------------------------------------
@@ -296,13 +303,13 @@ class UpblkRASTTypeCheckVisitor( RASTNodeVisitor ):
   #-----------------------------------------------------------------------
 
   def visit_TmpVar( s, node ):
-    if not node.name in s.tmp_var_type_env:
+    if not node.name in s.tmpvars:
       # This tmpvar is being created. Later when it is used, its type can
-      # be read from tmp_var_type_env.
+      # be read from tmpvars type environment.
       node.Type = NoneType()
 
     else:
-      node.Type = s.tmp_var_type_env[ node.name ]
+      node.Type = s.tmpvars[ node.name ]
 
   #-----------------------------------------------------------------------
   # visit_IfExp
@@ -376,7 +383,7 @@ class UpblkRASTTypeCheckVisitor( RASTNodeVisitor ):
       res_nbits = l_nbits
 
     else:
-      raise Exception( 'RASTTypeCheck internal error: unrecognized op!' )
+      raise Exception( 'RTLIRTypeCheck internal error: unrecognized op!' )
 
     # Both sides are constant expressions
     if isinstance( l_type, Const ) and isinstance( r_type, Const ):
@@ -405,7 +412,7 @@ class UpblkRASTTypeCheckVisitor( RASTNodeVisitor ):
   #-----------------------------------------------------------------------
 
   def visit_Attribute( s, node ):
-    # node.value should subclass RASTType.BaseAttr
+    # node.value should subclass RTLIRType.BaseAttr
     # Make sure node.value has an attribute named attr
     if not node.attr in node.value.Type.obj.__dict__:
       raise PyMTLTypeError(

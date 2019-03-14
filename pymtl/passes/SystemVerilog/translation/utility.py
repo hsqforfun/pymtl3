@@ -1,5 +1,5 @@
 #=========================================================================
-# helpers.py
+# utility.py
 #=========================================================================
 # This file includes the helper functions that might be useful for
 # translation or other passes.
@@ -9,33 +9,29 @@
 
 import inspect
 
-from pymtl                             import *
+from pymtl                        import *
 
-from pymtl.passes.rast                 import get_type
-from pymtl.passes.utility.pass_utility import *
-from pymtl.passes.rast.RASTType        import Struct
+from pymtl.passes.rtlir           import get_type
+from pymtl.passes.utility         import *
+from pymtl.passes.rtlir.RTLIRType import Struct, BaseRTLIRType
+
+from RTLIRTypeString import rtlir_to_str
 
 #-------------------------------------------------------------------------
-# collect_ports
+# generate_interface_decl
 #-------------------------------------------------------------------------
-# Return a list of members of `m` that are or include `Type` ports.
 
-def collect_ports( m, Type ):
+def generate_interface_decl( name, Type ):
 
-  def is_of_type( obj, Type ):
-    """Is obj Type or contains Type?"""
-    if isinstance( obj, Type ):
-      return True
-    if isinstance( obj, list ):
-      return reduce( lambda x, y: x and is_of_type( y, Type ), obj, True )
-    return False
+  type_str = Type.type_str()
+  if type_str['py_type'] == 'InVPort':
+    prefix = 'input'
+  elif type_str['py_type'] == 'OutVPort':
+    prefix = 'output'
+  else:
+    assert False, "only input and output value ports are supported now"
 
-  ret = []
-  for name, obj in m.__dict__.iteritems():
-    if isinstance( name, basestring ) and not name.startswith( '_' ):
-      if is_of_type( obj, Type ):
-        ret.append( ( name, obj ) )
-  return ret
+  return prefix + ' ' + generate_signal_decl_from_type( name, Type )
 
 #-------------------------------------------------------------------------
 # generate_signal_decl
@@ -55,7 +51,7 @@ def generate_signal_decl_from_type( name, Type ):
 
   name = get_verilog_name( name )
 
-  type_str = Type.type_str()
+  type_str = rtlir_to_str( Type )
 
   return '{dtype} {vec_size} {name} {dim_size}'.format(
     dtype = type_str[ 'dtype' ], vec_size = type_str[ 'vec_size' ],
@@ -63,103 +59,29 @@ def generate_signal_decl_from_type( name, Type ):
   )
 
 #-------------------------------------------------------------------------
-# generate_struct_defs
-#-------------------------------------------------------------------------
-
-def generate_struct_defs( _type_env ):
-
-  ret = ''
-
-  # Generate type environment of structs
-
-  type_env = []
-
-  for obj, Type in _type_env.iteritems():
-    if isinstance( Type, Struct ):
-      type_env.append( (obj, Type) )
-
-  # Deduplicate structs
-
-  for idx, (obj, Type) in enumerate(type_env):
-    for _idx, (_obj, _Type) in enumerate(type_env[idx+1:]):
-      if is_obj_eq( obj, _obj ):
-        del type_env[ _idx ]
-
-  # Generate struct dependency DAG
-  
-  dag = {}
-  in_degree = {}
-
-  for obj, Type in type_env:
-    if not (obj, Type) in dag:
-      dag[ (obj, Type) ] = []
-    if not (obj, Type) in in_degree:
-      in_degree[ (obj, Type) ] = 0
-
-    _env = Type.type_env
-    for _obj, _Type in _env.iteritems():
-      if isinstance( _Type, Struct ):
-        if not (_obj, _Type) in dag:
-          dag[ (_obj, _Type) ] = []
-        if not (obj, Type) in in_degree:
-          in_degree[ (obj, Type) ] = 0
-
-        dag[ (_obj, _Type) ].append( (obj, Type) )
-        in_degree[ (obj, Type) ] += 1
-
-  # Topo sort on dag
-
-  q = []
-  visited = {}
-
-  for vertex, ind in in_degree.iteritems():
-    if ind == 0:
-      q.append( vertex )
-
-  while q:
-    vertex = q.pop()
-
-    ret += generate_struct_def( vertex[0], vertex[1] )
-
-    visited[ vertex ] = True
-
-    for _vertex in dag[ vertex ]:
-      in_degree[ _vertex ] -= 1
-      if in_degree[ _vertex ] == 0:
-        q.append( _vertex )
-  
-  assert len( visited.keys() ) == len( dag.keys() ),\
-    "Circular dependency detected in struct definition!"
-
-  return ret
-
-#-------------------------------------------------------------------------
 # generate_struct_def
 #-------------------------------------------------------------------------
 # Generate the definition for a single struct object
 
-def generate_struct_def( obj, Type ):
+def generate_struct_def( name, Type ):
 
-  type_str = Type.type_str()
-
-  tplt = """typedef struct packed {{
+  template = """typedef struct packed {{
 {defs} 
 }} {name};
 """
 
   defs = []
+  type_str = rtlir_to_str( Type )
 
   # generate declarations for each field in the struct
   for _obj, _Type in Type.pack_order:
     defs.append(
-      generate_signal_decl( get_verilog_name( _obj._dsl.my_name ),
-        _obj ) + ';'
+      generate_signal_decl( get_verilog_name( _obj._dsl.my_name ), _obj ) + ';'
     )
-    pass
 
   make_indent( defs, 1 )
 
-  return tplt.format(
+  return template.format(
     defs = '\n'.join( defs ), name = type_str[ 'dtype' ]
   )
 
@@ -185,10 +107,13 @@ def get_model_parameters( model ):
   return ret
 
 #-------------------------------------------------------------------------
-# generate_model_name
+# generate_module_name
 #-------------------------------------------------------------------------
 
 def generate_module_name( model ):
+
+  if isinstance( model, BaseRTLIRType ):
+    model = model.obj
 
   ret = model.__class__.__name__
 
@@ -241,16 +166,3 @@ def is_param_equal( src, dst ):
 
 def get_verilog_name( name ):
   return name.replace( '[', '__' ).replace( ']', '__' )
-
-#-------------------------------------------------------------------------
-# get_topmost_member
-#-------------------------------------------------------------------------
-
-def get_topmost_member( model, signal ):
-
-  sig = signal
-
-  while not isinstance(sig._dsl.parent_obj, RTLComponent):
-    sig = sig._dsl.parent_obj
-
-  return sig

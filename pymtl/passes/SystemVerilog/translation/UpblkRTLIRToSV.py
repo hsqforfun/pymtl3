@@ -1,39 +1,29 @@
 #=========================================================================
-# ComponentUpblkRASTToSVPass.py
+# UpblkRTLIRToSV.py
 #=========================================================================
-# Translate RAST of all upblks in a component to SystemVerilog.
+# Translate RTLIR of one upblk to SystemVerilog.
 #
 # Author : Peitian Pan
 # Date   : Jan 23, 2019
 
-from pymtl                             import *
-from pymtl.passes                      import BasePass, PassMetadata
-from pymtl.passes.utility.pass_utility import freeze, make_indent
+from pymtl                        import *
+from pymtl.passes                 import BasePass, PassMetadata
+from pymtl.passes.utility         import freeze, make_indent
 
-from pymtl.passes.rast.RAST            import *
-from pymtl.passes.rast.RASTType        import *
+from pymtl.passes.rtlir.RTLIR     import *
+from pymtl.passes.rtlir.RTLIRType import *
 
-class ComponentUpblkRASTToSVPass( BasePass ):
-  def __call__( s, m ):
-    """Translate all upblk in m to a list of strings."""
+def rtlir_upblk_to_sv( blk, rtlir_upblk ):
 
-    m._pass_component_upblk_rast_to_sv = PassMetadata()
-
-    m._pass_component_upblk_rast_to_sv.sv = {}
-    m._pass_component_upblk_rast_to_sv.freevars = {}
-
-    visitor = UpblkRASTToSVVisitor( m )
-
-    for blk in m.get_update_blocks():
-      m._pass_component_upblk_rast_to_sv.sv[ blk ] =\
-        visitor.enter( blk, m._pass_component_upblk_rast_gen.rast[ blk ] )
+  visitor = UpblkRTLIRToSVVisitor( rtlir_upblk.component )
+  return visitor.enter( blk, rtlir_upblk )
 
 #-------------------------------------------------------------------------
-# UpblkRASTToSVVisitor
+# UpblkRTLIRToSVVisitor
 #-------------------------------------------------------------------------
-# Visitor that translates RAST to SystemVerilog for a single upblk.
+# Visitor that translates RTLIR to SystemVerilog for a single upblk.
 
-class UpblkRASTToSVVisitor( RASTNodeVisitor ):
+class UpblkRTLIRToSVVisitor( RTLIRNodeVisitor ):
 
   def __init__( s, component ):
     s.component = component
@@ -58,8 +48,8 @@ class UpblkRASTToSVVisitor( RASTNodeVisitor ):
       Eq : '==', NotEq : '!=', Lt : '<', LtE : '<=', Gt : '>', GtE : '>='
     }
 
-  def enter( s, blk, rast ):
-    """ entry point for RAST generation """
+  def enter( s, blk, rtlir ):
+    """ entry point for RTLIR generation """
     s.blk     = blk
 
     # s.globals contains a dict of the global namespace of the module where
@@ -79,7 +69,7 @@ class UpblkRASTToSVVisitor( RASTNodeVisitor ):
     # import pdb
     # pdb.set_trace()
 
-    return s.visit( rast )
+    return s.visit( rtlir )
 
   def visit_expr_wrap( s, node ):
     """ Helper function that selectively wraps expressions with brackets """
@@ -432,11 +422,6 @@ class UpblkRASTToSVVisitor( RASTNodeVisitor ):
   #-----------------------------------------------------------------------
 
   def visit_FreeVar( s, node ):
-    if not node.name in s.component._pass_component_upblk_rast_to_sv.freevars:
-      s.component._pass_component_upblk_rast_to_sv.freevars[ node.name ] = \
-        'localparam {name} = {value};'.format(
-          name = node.name, value = str( node.obj )
-        )
     return node.name
 
   #-----------------------------------------------------------------------

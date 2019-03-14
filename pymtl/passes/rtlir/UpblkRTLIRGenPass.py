@@ -1,7 +1,7 @@
 #=========================================================================
-# ComponentUpblkRASTGenPass.py
+# UpblkRTLIRGenPass.py
 #=========================================================================
-# This pass generates the RAST of a given component.
+# This pass generates the RTLIR of a given component.
 #
 # Author : Peitian Pan
 # Date   : Oct 20, 2018
@@ -9,22 +9,22 @@
 import ast
 
 from pymtl        import *
-from pymtl.dsl    import ComponentLevel1
 from pymtl.passes import BasePass, PassMetadata
 
 from errors       import PyMTLSyntaxError
-from RAST         import *
+from RTLIR        import *
 
-class ComponentUpblkRASTGenPass( BasePass ):
+class UpblkRTLIRGenPass( BasePass ):
 
   def __call__( s, m ):
-    """ generate RAST for all upblks of m and write them to m._rast """
+    """ generate RTLIR for all upblks of m"""
 
-    m._pass_component_upblk_rast_gen = PassMetadata()
+    if not hasattr( m, '_pass_upblk_rtlir_gen' ):
+      m._pass_upblk_rtlir_gen = PassMetadata()
 
-    m._pass_component_upblk_rast_gen.rast = {}
+    m._pass_upblk_rtlir_gen.rtlir_upblks = {}
 
-    visitor = UpblkRASTGenVisitor( m )
+    visitor = UpblkRTLIRGenVisitor( m )
 
     upblks = {
       'CombUpblk' : m.get_update_blocks() - m.get_update_on_edge(),
@@ -34,15 +34,15 @@ class ComponentUpblkRASTGenPass( BasePass ):
     for upblk_type in ( 'CombUpblk', 'SeqUpblk' ):
       for blk in upblks[ upblk_type ]:
         visitor._upblk_type = upblk_type
-        m._pass_component_upblk_rast_gen.rast[ blk ] =\
+        m._pass_upblk_rtlir_gen.rtlir_upblks[ blk ] =\
           visitor.enter( blk, m.get_update_block_ast( blk ) )
 
 #-------------------------------------------------------------------------
-# UpblkRASTGenVisitor
+# UpblkRTLIRGenVisitor
 #-------------------------------------------------------------------------
-# Visitor class for generating RAST for an update block
+# Visitor class for generating RTLIR for an update block
 
-class UpblkRASTGenVisitor( ast.NodeVisitor ):
+class UpblkRTLIRGenVisitor( ast.NodeVisitor ):
 
   def __init__( s, component ):
     s.component = component
@@ -51,7 +51,7 @@ class UpblkRASTGenVisitor( ast.NodeVisitor ):
     s.loop_var_env = set()
     s.tmp_var_env = set()
 
-    # opmap maps an ast operator to its RAST counterpart.
+    # opmap maps an ast operator to its RTLIR counterpart.
     s.opmap = {
       # Bool operators
       ast.And    : And(),       ast.Or     : Or(),
@@ -72,7 +72,7 @@ class UpblkRASTGenVisitor( ast.NodeVisitor ):
     }
 
   def enter( s, blk, ast ):
-    """ entry point for RAST generation """
+    """ entry point for RTLIR generation """
     s.blk     = blk
 
     # s.globals contains a dict of the global namespace of the module where
@@ -92,12 +92,14 @@ class UpblkRASTGenVisitor( ast.NodeVisitor ):
 
     ret = s.visit( ast )
 
+    ret.component = s.component
+
     return ret 
 
   #---------------------------------------------------------------------
   # visit_Module
   #---------------------------------------------------------------------
-  # The root of each upblk. RAST does not have a dedicated `module' node
+  # The root of each upblk. RTLIR does not have a dedicated `module' node
   # type.
 
   def visit_Module( s, node ):
@@ -406,7 +408,7 @@ class UpblkRASTGenVisitor( ast.NodeVisitor ):
   #-----------------------------------------------------------------------
   # Some data types are interpreted as function calls in the Python AST
   # Example: Bits4(2)
-  # These are converted to different RAST nodes in different contexts.
+  # These are converted to different RTLIR nodes in different contexts.
 
   def visit_Call( s, node ):
     actual_node = node.func

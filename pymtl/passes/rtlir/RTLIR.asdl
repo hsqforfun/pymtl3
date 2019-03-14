@@ -1,8 +1,8 @@
--- RAST description in Zephyr ASDL
+-- RTLIR description in Zephyr ASDL
 -- identifier, int, string, object, bool are the five built-in types of
 -- Zephyr ASDL
 
-module RAST
+module RTLIR
 {
   upblk = CombUpblk( string name, stmt* body )
         | SeqUpblk( string name, stmt* body )

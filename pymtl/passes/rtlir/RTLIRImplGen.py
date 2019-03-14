@@ -1,11 +1,11 @@
 #=========================================================================
-# RASTImplGen.py
+# RTLIRImplGen.py
 #=========================================================================
-# This file generates (1) the implementation of the RAST ASDL defined in
-# RAST.asdl which should reside in the same directory as this file and 
-# (2) the implementation of RAST visualization pass.
-# The generated implementation is printed to RAST.py under the same
-# directory. RAST visualization pass is printed to RASTVisualizationPass.py 
+# This file generates (1) the implementation of the RTLIR ASDL defined in
+# RTLIR.asdl which should reside in the same directory as this file and 
+# (2) the implementation of RTLIR visualization pass.
+# The generated implementation is printed to RTLIR.py under the same
+# directory. RTLIR visualization pass is printed to RTLIRVisualizationPass.py 
 # under the same directory
 #
 # Author : Peitian Pan
@@ -20,7 +20,7 @@ class constructor( object ):
 
   impl_template =\
 """
-class {constr_name}( BaseRAST ):
+class {constr_name}( BaseRTLIR ):
   def __init__( s{params_name} ):
     {params_assign}
 
@@ -201,7 +201,7 @@ class RASTVisualizationVisitor( RASTNodeVisitor ):
     body = []
 
     if s.type_list is None:
-      # No parameter for this RAST node.
+      # No parameter for this RTLIR node.
       # Just creating a single vertex is enough.
 
       body.append( "s.g.node( str( s.cur ), label = label )" )
@@ -213,8 +213,8 @@ class RASTVisualizationVisitor( RASTNodeVisitor ):
       label_trail = ''
 
     else: 
-      # 1. Create a vertex corresponding to this RAST node
-      # 2. Add edges between this RAST node and all child nodes
+      # 1. Create a vertex corresponding to this RTLIR node
+      # 2. Add edges between this RTLIR node and all child nodes
 
       body.append( "s.g.node( str( s.cur ), label = label )" )
 
@@ -232,7 +232,7 @@ class RASTVisualizationVisitor( RASTNodeVisitor ):
       customized_str = \
       "s.g.edge( str({s}), str({t}), label = '{edge_label}'{edge_label_trail} )"
 
-      # Process each field of this RAST node
+      # Process each field of this RTLIR node
       for t, f in zip( s.type_list, s.field_list ):
         if s.is_built_in( t ):
           # Add this built-in type to the label string
@@ -427,10 +427,10 @@ def implement_module( module_str ):
 
   impl_str += constructor.rast_visitor_str
 
-  with open( 'RAST.py', 'w' ) as output:
+  with open( 'RTLIR.py', 'w' ) as output:
     output.write( impl_str )
 
-  with open( 'RASTVisualizationPass.py', 'w' ) as output:
+  with open( 'RTLIRVisualizationPass.py', 'w' ) as output:
     output.write( viz_impl_str )
 
 def extract_module( asdl_str ):
@@ -446,17 +446,17 @@ def extract_module( asdl_str ):
   return module_name, module_str
 
 # This file should be run first to generate the correct implementation 
-# of RAST.
+# of RTLIR.
 if __name__ == '__main__':
-  with open( 'RAST.asdl', 'r') as asdl_file:
+  with open( 'RTLIR.asdl', 'r') as asdl_file:
     asdl_str = ''
     for line in asdl_file:
       if line.strip().startswith( '--' ) or ( not line.strip() ):
         continue
       asdl_str += line.strip() + ' '
 
-    # RAST module is the first one in the file
+    # RTLIR module is the first one in the file
     module_name, module_str = extract_module( asdl_str )
-    assert module_name == 'RAST'
+    assert module_name == 'RTLIR'
 
     implement_module( module_str )

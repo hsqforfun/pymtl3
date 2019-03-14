@@ -14,18 +14,18 @@
 from copy                    import copy
 
 from pymtl                   import *
-from pymtl.passes            import BasePass
+from pymtl.passes            import BasePass, PassMetadata
 from pymtl.passes.simulation import GenDAGPass
 
-from helpers                 import get_topmost_member, generate_module_name
+from utility                 import get_topmost_member
 
 class ConstraintGenPass( BasePass ):
 
   def __call__( s, top ):
     """ convert the constraint DAG of top into ssg files """
 
-    model_name    = generate_module_name( top )
-    ssg_file_name = model_name + '.ssg'
+    if not hasattr( top, '_pass_constraint_gen' ):
+      top._pass_constraint_gen = PassMetadata()
 
     # Collect all vertices and edges of the constraint DAG
 
@@ -96,18 +96,16 @@ class ConstraintGenPass( BasePass ):
     # outports
 
     for inport in top_inports:
-      # import pdb
-      # pdb.set_trace()
       s.flood_mark( inport, lambda signal: signal in top_outports,\
         inport, 'CombPath' )
 
-    # Print out the connections. For each outport, list all the inports
-    # it depends on.
+    # For each outport, list all the inports it depends on.
     
-    with open( ssg_file_name, 'w' ) as ssg_file:
-      for outport in top_outports:
-        string = s.ssg_dict_to_str( top_inports, outport ) + '\n'
-        ssg_file.write( string )
+    constraint_src = ""
+    for outport in top_outports:
+      constraint_src += s.ssg_dict_to_str( top_inports, outport ) + '\n'
+
+    top._pass_constraint_gen.constraint_src = constraint_src
 
   def flood_mark( s, cur, flt, inport, pre_path_type ):
     if not cur in s.net: return

@@ -8,7 +8,9 @@
 # Date   : Feb 22, 2019
 
 from pymtl.passes.utility.pass_utility import make_indent
-from pymtl.passes.rast                 import get_type
+from pymtl.passes.rtlir                import get_type
+
+from RTLIRTypeString import rtlir_to_str
 
 #-------------------------------------------------------------------------
 # generate_signal_decl_c
@@ -16,7 +18,8 @@ from pymtl.passes.rast                 import get_type
 
 def generate_signal_decl_c( name, port ):
 
-  type_str = get_type( port ).type_str()
+  # type_str = get_type( port ).type_str()
+  type_str = rtlir_to_str( get_type( port ) )
 
   nbits = type_str[ 'nbits' ]
 
@@ -39,7 +42,7 @@ def generate_signal_init_c( name, port ):
 
   ret = []
 
-  type_str = get_type( port ).type_str()
+  type_str = rtlir_to_str( get_type( port ) )
 
   nbits     = type_str[ 'nbits' ]
   deference = '&' if nbits <= 64 else ''
@@ -127,7 +130,8 @@ def generate_default_ssg( ports ):
 
 def generate_signal_decl_py( name, port ):
 
-  type_str = get_type( port ).type_str()
+  # type_str = get_type( port ).type_str()
+  type_str = rtlir_to_str( get_type( port ) )
 
   nbits = type_str[ 'nbits' ]
   dtype_str = type_str[ 'py_type' ]
@@ -361,7 +365,7 @@ def generate_internal_line_trace_py( ports ):
 
 def get_indices( port ):
 
-  type_str = get_type( port ).type_str()
+  type_str = rtlir_to_str( get_type( port ) )
 
   nbits = type_str[ 'nbits' ]
 

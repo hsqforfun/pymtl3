@@ -13,7 +13,7 @@ from pymtl                             import *
 from pclib.rtl                         import Adder, Subtractor
 from pymtl.passes.SystemVerilog        import TranslationPass
 from pymtl.passes.utility.test_utility import expected_failure
-from pymtl.passes.rast.errors          import PyMTLSyntaxError, PyMTLTypeError
+from pymtl.passes.rtlir.errors         import PyMTLSyntaxError, PyMTLTypeError
 
 def test_wrapped_noconnect_adder():
   class Adder_wrap_noc( RTLComponent ):

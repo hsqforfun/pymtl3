@@ -12,7 +12,8 @@ import os, re, sys, shutil
 
 from pymtl            import *
 from pymtl.passes     import BasePass, PassMetadata
-from ..translation    import collect_ports, generate_module_name
+from pymtl.passes.utility import collect_objs
+from ..translation    import generate_module_name
 
 from ExternalSimSetup import setup_external_sim
 from PyMTLWrapperGen  import generate_py_wrapper
@@ -43,7 +44,7 @@ class SimpleImportPass( BasePass ):
     # Generate the interface structure
 
     interface =\
-      collect_ports( model, InVPort ) + collect_ports( model, OutVPort )
+      collect_objs( model, InVPort ) + collect_objs( model, OutVPort )
 
     ports = sorted(
       model.get_input_value_ports() | model.get_output_value_ports(),

@@ -1,7 +1,7 @@
 #=========================================================================
-# RASTType.py
+# RTLIRType.py
 #=========================================================================
-# This file contains all RAST types in its type system.
+# This file contains all RTLIR types in its type system.
 #
 # Author : Peitian Pan
 # Date   : Jan 6, 2019
@@ -12,15 +12,15 @@ from pymtl                             import *
 from pymtl.passes.utility.pass_utility import freeze, is_obj_eq
 
 #-------------------------------------------------------------------------
-# Base RAST Type
+# Base RTLIR Type
 #-------------------------------------------------------------------------
 
-class BaseRASTType( object ):
+class BaseRTLIRType( object ):
   def __new__( cls, *args, **kwargs ):
-    return super( BaseRASTType, cls ).__new__( cls )
+    return super( BaseRTLIRType, cls ).__new__( cls )
 
   def __init__( s ):
-    super( BaseRASTType, s ).__init__()
+    super( BaseRTLIRType, s ).__init__()
 
 #-------------------------------------------------------------------------
 # NoneType
@@ -28,7 +28,7 @@ class BaseRASTType( object ):
 # This type is used when a TmpVar node is visited before getting its type
 # from an assignment
 
-class NoneType( BaseRASTType ):
+class NoneType( BaseRTLIRType ):
   def __init__( s ):
     super( NoneType, s ).__init__()
 
@@ -58,7 +58,7 @@ class NoneType( BaseRASTType ):
 #-------------------------------------------------------------------------
 # Signal expressions are used for slicing, index, attribute, etc.
 
-class Signal( BaseRASTType ):
+class Signal( BaseRTLIRType ):
   def __init__( s, nbits, py_type = 'Wire' ):
     super( Signal, s ).__init__()
     s.nbits = nbits
@@ -66,14 +66,11 @@ class Signal( BaseRASTType ):
 
   def type_str( s ):
     ret = {
-        'dtype'      : 'logic',
-        'py_type'    : s.py_type,
-        'vec_size'   : '[{}:{}]'.format( s.nbits-1, 0 ),
-        'nbits'      : s.nbits,
-        'total_bits' : s.nbits,
-        'dim_size'   : '',
-        'c_dim_size' : '',
-        'n_dim_size' : [],
+      'py_type'    : s.py_type,
+      'nbits'      : s.nbits,
+      'total_bits' : s.nbits,
+      'c_dim_size' : '',
+      'n_dim_size' : [],
     }
     return ret
 
@@ -113,7 +110,7 @@ class Signal( BaseRASTType ):
 # Packed array type. We assume all Python list translates to packed
 # array because only packed structs are synthesizable.
 
-class Array( BaseRASTType ):
+class Array( BaseRTLIRType ):
   def __init__( s, length, Type ):
     super( Array, s ).__init__()
     s.length = length
@@ -122,14 +119,12 @@ class Array( BaseRASTType ):
   def type_str( s ):
     sub_type_str = s.Type.type_str()
     ret = {
-      'dtype'      : sub_type_str[ 'dtype' ],
       'py_type'    : sub_type_str[ 'py_type' ],
-      'vec_size'   : sub_type_str[ 'vec_size' ],
       'nbits'      : sub_type_str[ 'nbits' ],
       'total_bits' : 0,
-      'dim_size'   : \
-        '[{}:{}]'.format( 0, s.length-1 ) + sub_type_str[ 'dim_size' ],
-      'c_dim_size' : '[{}]'.format( s.length ) + sub_type_str[ 'c_dim_size' ],
+      # 'dim_size'   : \
+        # '[{}:{}]'.format( 0, s.length-1 ) + sub_type_str[ 'dim_size' ],
+      # 'c_dim_size' : '[{}]'.format( s.length ) + sub_type_str[ 'c_dim_size' ],
       'n_dim_size' : [ s.length ] + sub_type_str[ 'n_dim_size' ]
     }
 
@@ -167,7 +162,7 @@ class Array( BaseRASTType ):
 #-------------------------------------------------------------------------
 # Constant expressions, used as slicing upper/lower bounds, index
 
-class Const( BaseRASTType ):
+class Const( BaseRTLIRType ):
   def __init__( s, is_static, nbits, value = None ):
     # is_static == False <=> value == None
     s.is_static = is_static
@@ -179,14 +174,14 @@ class Const( BaseRASTType ):
  provide initial value!"
 
     ret = {
-        'dtype'      : 'const logic',
+        # 'dtype'      : 'const logic',
         'py_type'    : 'Bits' + str(s.nbits),
-        'vec_size'   : '[{}:{}]'.format( s.nbits-1, 0 ),
+        # 'vec_size'   : '[{}:{}]'.format( s.nbits-1, 0 ),
         'value'      : str(s.value),
         'nbits'      : s.nbits,
         'total_bits' : s.nbits,
-        'dim_size'   : '',
-        'c_dim_size' : '',
+        # 'dim_size'   : '',
+        # 'c_dim_size' : '',
         'n_dim_size' : [],
     }
 
@@ -213,7 +208,7 @@ class Const( BaseRASTType ):
 # Bool Type
 #-------------------------------------------------------------------------
 
-class Bool( BaseRASTType ):
+class Bool( BaseRTLIRType ):
   def __init__( s ):
     pass
 
@@ -243,7 +238,7 @@ class Bool( BaseRASTType ):
 # This is the base type for all types that can serve as the base of an
 # attribute operation.
 
-class BaseAttr( BaseRASTType ):
+class BaseAttr( BaseRTLIRType ):
   def __init__( s, obj, type_env ):
     super( BaseAttr, s ).__init__()
     s.obj = obj
@@ -275,13 +270,13 @@ class Module( BaseAttr ):
 
   def type_str( s ):
     ret = {
-      'dtype'      : s.obj.__class__.__name__,
+      # 'dtype'      : s.obj.__class__.__name__,
       'py_type'    : s.obj.__class__.__name__,
-      'vec_size'   : '',
+      # 'vec_size'   : '',
       'nbits'      : 0,
       'total_bits' : 0,
-      'dim_size'   : '',
-      'c_dim_size' : '',
+      # 'dim_size'   : '',
+      # 'c_dim_size' : '',
       'n_dim_size' : []
     }
 
@@ -308,13 +303,13 @@ class Struct( BaseAttr ):
 
   def type_str( s ):
     ret = {
-      'dtype'      : s.obj._dsl.Type.__class__.__name__,
+      # 'dtype'      : s.obj._dsl.Type.__class__.__name__,
       'py_type'    : s.obj.__class__.__name__, # packed struct -> port/wire
-      'vec_size'   : '',
+      # 'vec_size'   : '',
       'nbits'      : 0,
       'total_bits' : 0,
-      'dim_size'   : '',
-      'c_dim_size' : '',
+      # 'dim_size'   : '',
+      # 'c_dim_size' : '',
       'n_dim_size' : []
     }
 
@@ -373,7 +368,7 @@ class Interface( BaseAttr ):
 #-------------------------------------------------------------------------
 
 def get_type( obj ):
-  """return the RAST type of obj"""
+  """return the RTLIR type of obj"""
 
   # child component of the given module
   if isinstance( obj, RTLComponent ):
@@ -437,10 +432,14 @@ def get_type( obj ):
     type_list = map( lambda x: get_type( x ), obj )
 
     assert reduce(lambda x, y: x and (y == type_list[0]), type_list, True),\
-      'Elements of list ' + str(obj) + ' must have the same RAST type!'
+      'Elements of list ' + str(obj) + ' must have the same RTLIR type!'
 
     for _obj, _Type in zip( obj, type_list ):
       type_env[ _obj ] = _Type
+      try:
+        type_env.update( _Type.type_env )
+      except:
+        pass
 
     ret = Array( len( obj ), type_list[0] )
     ret.type_env = type_env
