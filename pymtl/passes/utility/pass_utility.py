@@ -16,18 +16,19 @@ import inspect, copy
 
 def collect_objs( m, Type ):
 
-  def is_of_type( obj, Type ):
-    """Is obj Type or contains Type?"""
-    if isinstance( obj, Type ):
-      return True
-    if isinstance( obj, list ):
-      return reduce( lambda x, y: x and is_of_type( y, Type ), obj, True )
-    return False
+  # def is_of_type( obj, Type ):
+    # """Is obj Type or contains Type?"""
+    # if isinstance( obj, Type ):
+      # return True
+    # if isinstance( obj, list ):
+      # return reduce( lambda x, y: x and is_of_type( y, Type ), obj, True )
+    # return False
 
   ret = []
   for name, obj in m.__dict__.iteritems():
     if isinstance( name, basestring ) and not name.startswith( '_' ):
-      if is_of_type( obj, Type ):
+      if isinstance( obj, Type ):
+      # if is_of_type( obj, Type ):
         ret.append( ( name, obj ) )
   return ret
 

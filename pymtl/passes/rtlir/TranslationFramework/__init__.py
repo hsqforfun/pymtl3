@@ -1,2 +1,0 @@
-
-from translate import RTLIRTranslator

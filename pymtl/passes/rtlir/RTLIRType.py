@@ -69,7 +69,6 @@ class Signal( BaseRTLIRType ):
       'py_type'    : s.py_type,
       'nbits'      : s.nbits,
       'total_bits' : s.nbits,
-      'c_dim_size' : '',
       'n_dim_size' : [],
     }
     return ret
@@ -122,9 +121,6 @@ class Array( BaseRTLIRType ):
       'py_type'    : sub_type_str[ 'py_type' ],
       'nbits'      : sub_type_str[ 'nbits' ],
       'total_bits' : 0,
-      # 'dim_size'   : \
-        # '[{}:{}]'.format( 0, s.length-1 ) + sub_type_str[ 'dim_size' ],
-      # 'c_dim_size' : '[{}]'.format( s.length ) + sub_type_str[ 'c_dim_size' ],
       'n_dim_size' : [ s.length ] + sub_type_str[ 'n_dim_size' ]
     }
 
@@ -174,15 +170,11 @@ class Const( BaseRTLIRType ):
  provide initial value!"
 
     ret = {
-        # 'dtype'      : 'const logic',
-        'py_type'    : 'Bits' + str(s.nbits),
-        # 'vec_size'   : '[{}:{}]'.format( s.nbits-1, 0 ),
-        'value'      : str(s.value),
-        'nbits'      : s.nbits,
-        'total_bits' : s.nbits,
-        # 'dim_size'   : '',
-        # 'c_dim_size' : '',
-        'n_dim_size' : [],
+      'py_type'    : 'Bits' + str(s.nbits),
+      'value'      : str(s.value),
+      'nbits'      : s.nbits,
+      'total_bits' : s.nbits,
+      'n_dim_size' : [],
     }
 
     return ret
@@ -270,13 +262,9 @@ class Module( BaseAttr ):
 
   def type_str( s ):
     ret = {
-      # 'dtype'      : s.obj.__class__.__name__,
       'py_type'    : s.obj.__class__.__name__,
-      # 'vec_size'   : '',
       'nbits'      : 0,
       'total_bits' : 0,
-      # 'dim_size'   : '',
-      # 'c_dim_size' : '',
       'n_dim_size' : []
     }
 
@@ -303,13 +291,9 @@ class Struct( BaseAttr ):
 
   def type_str( s ):
     ret = {
-      # 'dtype'      : s.obj._dsl.Type.__class__.__name__,
       'py_type'    : s.obj.__class__.__name__, # packed struct -> port/wire
-      # 'vec_size'   : '',
       'nbits'      : 0,
       'total_bits' : 0,
-      # 'dim_size'   : '',
-      # 'c_dim_size' : '',
       'n_dim_size' : []
     }
 

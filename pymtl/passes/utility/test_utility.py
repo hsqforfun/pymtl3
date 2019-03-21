@@ -7,7 +7,7 @@
 # Author : Peitian Pan
 # Date   : Feb 21, 2019
 
-import pytest
+import pytest, inspect
 
 from pymtl                   import *
 from pymtl.passes.PassGroups import SimpleSim, SimpleSimDumpDAG
@@ -29,8 +29,8 @@ def do_test( request ):
 #-------------------------------------------------------------------------
 # expected_failure
 #-------------------------------------------------------------------------
-# This decorator is used to mark a test case as expected to fail because
-# throwing a specific exception is the correct behavior. 
+# This function is used to run a test case which is expected to fail and
+# throwing a specific exception is the correct behavior.
 # Not to be confused with pytest.xfail, which is commonly used to mark
 # tests related to unimplemented functionality.
 
@@ -45,6 +45,76 @@ def expected_failure( exception = Exception ):
     pass
   except:
     raise Exception( func.__name__ + ' test unexpectedly passed!' )
+
+#-------------------------------------------------------------------------
+# gen_rtlir_trans_label
+#-------------------------------------------------------------------------
+
+def gen_rtlir_trans_label( structural_levels, behavioral_levels ):
+
+  s_levels = [
+    structural_levels['dtype'], structural_levels['decl'],
+    structural_levels['connection']
+  ]
+
+  b_levels = [
+    behavioral_levels['upblk'], behavioral_levels['constraint']
+  ]
+
+  return reduce( lambda x, y: x+str(y), s_levels+b_levels, '' )
+
+#-------------------------------------------------------------------------
+# gen_rtlir_translator
+#-------------------------------------------------------------------------
+
+_rtlir_translators = {}
+
+def gen_rtlir_translator( structural_levels, behavioral_levels ):
+
+  s_levels = [
+    structural_levels['dtype'], structural_levels['decl'],
+    structural_levels['connection']
+  ]
+
+  b_levels = [
+    behavioral_levels['upblk'], behavioral_levels['constraint']
+  ]
+
+  label = gen_rtlir_trans_label( structural_levels, behavioral_levels )
+
+  if label in _rtlir_translators: return _rtlir_translators[ label ]
+
+  from pymtl.passes.rtlir.translation.structural.StructuralTrans\
+      import mk_StructuralTrans
+  from pymtl.passes.rtlir.translation.behavioral.BehavioralTrans\
+      import mk_BehavioralTrans
+  from pymtl.passes.rtlir.translation.RTLIRTrans import mk_RTLIRTrans
+
+  _rtlir_translators[ label ] = mk_RTLIRTrans(
+    mk_StructuralTrans( *s_levels ), mk_BehavioralTrans( *b_levels )
+  )
+
+  return _rtlir_translators[ label ]
+
+#-------------------------------------------------------------------------
+# gen_translation_pass
+#-------------------------------------------------------------------------
+
+_backend_translators = {}
+
+def gen_translation_pass( mk_pass, mk_backend_trans, structural_levels,
+    behavioral_levels ):
+
+  label = gen_rtlir_trans_label( structural_levels, behavioral_levels )
+
+  if label in _backend_translators:
+    return mk_pass( _backend_translators[ label ] )
+
+  rtlir_trans = gen_rtlir_translator( structural_levels, behavioral_levels )
+
+  _backend_translators[ label ] = mk_backend_trans( rtlir_trans )
+
+  return mk_pass( _backend_translators[ label ] )
 
 #-------------------------------------------------------------------------
 # run_translation_test
