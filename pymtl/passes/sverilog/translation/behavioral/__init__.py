@@ -1,2 +1,2 @@
 
-from SVBehavioralTrans import SVBehavioralTrans
+from SVBehavioralTranslatorL2 import SVBehavioralTranslatorL2 as SVBehavioralTranslator

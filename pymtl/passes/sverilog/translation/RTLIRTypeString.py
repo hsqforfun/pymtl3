@@ -4,7 +4,7 @@
 # This file includes functions that convert an RTLIR type into a dict
 # which contains various string represenations of the type.
 
-from pymtl.passes.rtlir.RTLIRType import *
+from pymtl.passes.rtlir import BaseBehavioralRTLIRType
 
 #-------------------------------------------------------------------------
 # Specialized type string functions
@@ -97,5 +97,5 @@ rtlir_type_string = {
 }
 
 def rtlir_to_str( Type ):
-  assert isinstance( Type, BaseRTLIRType )
+  assert isinstance( Type, BaseBehavioralRTLIRType )
   return rtlir_type_string[ str(Type) ]( Type )

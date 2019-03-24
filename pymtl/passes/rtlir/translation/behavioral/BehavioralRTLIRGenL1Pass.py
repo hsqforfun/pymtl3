@@ -1,5 +1,5 @@
 #=========================================================================
-# UpblkRTLIRGenPass.py
+# BehavioralRTLIRGenL1Pass.py
 #=========================================================================
 # This pass generates the RTLIR of a given component.
 #
@@ -10,21 +10,21 @@ import ast
 
 from pymtl        import *
 from pymtl.passes import BasePass, PassMetadata
-from pymtl.passes.rtlir.RTLIR import *
+from pymtl.passes.rtlir.translation.behavioral.BehavioralRTLIR import *
 
 from errors     import PyMTLSyntaxError
 
-class UpblkRTLIRGenPass( BasePass ):
+class BehavioralRTLIRGenL1Pass( BasePass ):
 
   def __call__( s, m ):
     """ generate RTLIR for all upblks of m"""
 
-    if not hasattr( m, '_pass_upblk_rtlir_gen' ):
-      m._pass_upblk_rtlir_gen = PassMetadata()
+    if not hasattr( m, '_pass_behavioral_rtlir_gen' ):
+      m._pass_behavioral_rtlir_gen = PassMetadata()
 
-    m._pass_upblk_rtlir_gen.rtlir_upblks = {}
+    m._pass_behavioral_rtlir_gen.rtlir_upblks = {}
 
-    visitor = UpblkRTLIRGenVisitor( m )
+    visitor = BehavioralRTLIRGeneratorL1( m )
 
     upblks = {
       'CombUpblk' : m.get_update_blocks() - m.get_update_on_edge(),
@@ -34,45 +34,23 @@ class UpblkRTLIRGenPass( BasePass ):
     for upblk_type in ( 'CombUpblk', 'SeqUpblk' ):
       for blk in upblks[ upblk_type ]:
         visitor._upblk_type = upblk_type
-        m._pass_upblk_rtlir_gen.rtlir_upblks[ blk ] =\
+        m._pass_behavioral_rtlir_gen.rtlir_upblks[ blk ] =\
           visitor.enter( blk, m.get_update_block_ast( blk ) )
 
 #-------------------------------------------------------------------------
-# UpblkRTLIRGenVisitor
+# BehavioralRTLIRGeneratorL1
 #-------------------------------------------------------------------------
-# Visitor class for generating RTLIR for an update block
 
-class UpblkRTLIRGenVisitor( ast.NodeVisitor ):
+class BehavioralRTLIRGeneratorL1( ast.NodeVisitor ):
 
   def __init__( s, component ):
+
     s.component = component
     s.mapping   = component.get_astnode_obj_mapping()
 
-    s.loop_var_env = set()
-    s.tmp_var_env = set()
-
-    # opmap maps an ast operator to its RTLIR counterpart.
-    s.opmap = {
-      # Bool operators
-      ast.And    : And(),       ast.Or     : Or(),
-      # Unary operators
-      ast.Invert : Invert(),    ast.Not    : Not(),
-      ast.UAdd   : UAdd(),      ast.USub   : USub(),
-      # Binary operators
-      ast.Add    : Add(),       ast.Sub    : Sub(),
-      ast.Mult   : Mult(),      ast.Div    : Div(),
-      ast.Mod    : Mod(),       ast.Pow    : Pow(),
-      ast.LShift : ShiftLeft(), ast.RShift : ShiftRightLogic(),
-      ast.BitOr  : BitOr(),     ast.BitAnd : BitAnd(),
-      ast.BitXor : BitXor(),
-      # Compare operators
-      ast.Eq     : Eq(),        ast.NotEq  : NotEq(),
-      ast.Lt     : Lt(),        ast.LtE    : LtE(),
-      ast.Gt     : Gt(),        ast.GtE    : GtE()
-    }
-
   def enter( s, blk, ast ):
     """ entry point for RTLIR generation """
+
     s.blk     = blk
 
     # s.globals contains a dict of the global namespace of the module where
@@ -99,7 +77,7 @@ class UpblkRTLIRGenVisitor( ast.NodeVisitor ):
   #---------------------------------------------------------------------
   # visit_Module
   #---------------------------------------------------------------------
-  # The root of each upblk. RTLIR does not have a dedicated `module' node
+  # The root of each upblk. RTLIR does not have a dedicated `module` node
   # type.
 
   def visit_Module( s, node ):
@@ -159,251 +137,6 @@ class UpblkRTLIRGenVisitor( ast.NodeVisitor ):
     return ret
 
   #-----------------------------------------------------------------------
-  # visit_AugAssign
-  #-----------------------------------------------------------------------
-  # Preserve the form of augmented assignment instead of transforming it 
-  # into a normal assignment.
-
-  def visit_AugAssign( s, node ): 
-    value = s.visit( node.value )
-    target = s.visit( node.target )
-
-    try:
-      op  = s.opmap[ type( node.op ) ]
-      op.ast = node.op
-
-    except KeyError:
-      raise PyMTLSyntaxError(
-        s.blk, node, 'Operator ' + node.op + ' is not supported!'
-      )
-
-    ret = AugAssign( target, op, value )
-    ret.ast = node
-
-    return ret
-
-  #-----------------------------------------------------------------------
-  # visit_If
-  #-----------------------------------------------------------------------
-
-  def visit_If( s, node ):
-    cond = s.visit( node.test )
-
-    body = []
-    for body_stmt in node.body:
-      body.append( s.visit( body_stmt ) )
-
-    orelse = []
-    for orelse_stmt in node.orelse:
-      orelse.append( s.visit( orelse_stmt ) )
-
-    ret = If( cond, body, orelse )
-    ret.ast = node
-
-    return ret
-
-  #-----------------------------------------------------------------------
-  # visit_For
-  #-----------------------------------------------------------------------
-
-  def visit_For( s, node ):
-    # First fill the loop_var, start, end, step fields
-
-    if node.orelse != []:
-      raise PyMTLSyntaxError(
-        s.blk, node, "for loops cannot have 'else' branch!"
-      )
-
-    if not isinstance( node.target, ast.Name ):
-      raise PyMTLSyntaxError(
-        s.blk, node, "The loop index must be a temporary variable!"
-      )
-
-    loop_var_name = node.target.id
-
-    # Check whether loop_var_name has been defined before
-    if loop_var_name in s.loop_var_env:
-      raise PyMTLSyntaxError(
-        s.blk, node, "Redefinition of loop index " + loop_var_name + "!"
-      )
-
-    # Add loop_var to the loop variable environment
-    s.loop_var_env.add( loop_var_name )
-    
-    var = LoopVarDecl( node.target.id )
-
-    if not isinstance( node.iter, ast.Call ):
-      raise PyMTLSyntaxError(
-        s.blk, node, "for loops can only use (x)range() after 'in'!"
-      )
-
-    if not node.iter.func.id in [ 'xrange', 'range' ]:
-      raise PyMTLSyntaxError(
-        s.blk, node, "for loops can only use (x)range() after 'in'!"
-      )
-
-    args = node.iter.args
-
-    if len( args ) == 1:
-      # xrange( end )
-      start = Number( 0 )
-      end = s.visit( args[0] )
-      step = Number( 1 )
-
-    elif len( args ) == 2:
-      # xrange( start, end )
-      start = s.visit( args[0] )
-      end = s.visit( args[1] )
-      step = Number( 1 )
-
-    elif len( args ) == 3:
-      # xrange( start, end, step )
-      start = s.visit( args[0] )
-      end = s.visit( args[1] )
-      step = s.visit( args[2] )
-
-    else:
-      raise PyMTLSyntaxError(
-        s.blk, node, "1~3 arguments should be given to (x)range!"
-      )
-
-    # Then visit all statements inside the loop
-
-    body = []
-    for body_stmt in node.body:
-      body.append( s.visit( body_stmt ) )
-
-    # Before we return, clear the loop variable in the loop variable
-    # environment
-    s.loop_var_env.remove( loop_var_name )
-
-    ret = For( var, start, end, step, body )
-    ret.ast = node
-
-    return ret
-
-  #-----------------------------------------------------------------------
-  # visit_BoolOp
-  #-----------------------------------------------------------------------
-
-  def visit_BoolOp( s, node ):
-    try:
-      op  = s.opmap[ type( node.op ) ]
-      op.ast = node.op
-
-    except KeyError:
-      raise PyMTLSyntaxError(
-        s.blk, node, 'Operator ' + node.op + ' is not supported!'
-      )
-
-    values = []
-    for value in node.values:
-      values.append( s.visit( value ) )
-
-    ret = BoolOp( op, values )
-    ret.ast = node
-
-    return ret
-
-  #-----------------------------------------------------------------------
-  # visit_Expr
-  #-----------------------------------------------------------------------
-  # ast.Expr might be useful when a statement is only a call to a task or 
-  # a non-returning function.
-
-  def visit_Expr( s, node ):
-    # Should only be useful as a call to SystemVerilog tasks
-    # Not implemented yet!
-    raise PyMTLSyntaxError(
-      s.blk, node, 'Task is not supported yet!'
-    )
-
-  #-----------------------------------------------------------------------
-  # visit_BinOp
-  #-----------------------------------------------------------------------
-
-  def visit_BinOp( s, node ):
-    left  = s.visit( node.left )
-    right = s.visit( node.right )
-
-    try:
-      op  = s.opmap[ type( node.op ) ]
-      op.ast = node.op
-
-    except KeyError:
-      raise PyMTLSyntaxError(
-        s.blk, node, 'Operator ' + node.op + ' is not supported!'
-      )
-
-    ret = BinOp( left, op, right )
-    ret.ast = node
-
-    return ret
-
-  #-----------------------------------------------------------------------
-  # visit_UnaryOp
-  #-----------------------------------------------------------------------
-
-  def visit_UnaryOp( s, node ):
-    try:
-      op  = s.opmap[ type( node.op ) ]
-      op.ast = node.op
-
-    except KeyError:
-      raise PyMTLSyntaxError(
-        s.blk, node, 'Operator ' + node.op + ' is not supported!'
-      )
-
-    operand = s.visit( node.operand )
-
-    ret = UnaryOp( op, operand )
-    ret.ast = node
-
-    return ret
-
-  #-----------------------------------------------------------------------
-  # visit_IfExp
-  #-----------------------------------------------------------------------
-
-  def visit_IfExp( s, node ):
-    cond = s.visit( node.test )
-    body = s.visit( node.body )
-    orelse = s.visit( node.orelse )
-
-    ret = IfExp( cond, body, orelse )
-    ret.ast = node
-
-    return ret
-
-  #-----------------------------------------------------------------------
-  # visit_Compare
-  #-----------------------------------------------------------------------
-  # Continuous comparison like x < y < z is not allowed.
-
-  def visit_Compare( s, node ):
-    if len( node.ops ) != 1 or len( node.comparators ) != 1:
-      raise PyMTLSyntaxError(
-        s.blk, node, 'Comparison can only have 2 operands!'
-      )
-
-    try:
-      op  = s.opmap[ type( node.ops[0] ) ]
-      op.ast = node.ops[0]
-
-    except KeyError:
-      raise PyMTLSyntaxError(
-        s.blk, node, 'Operator ' + node.ops[0] + ' is not supported!'
-      )
-
-    left = s.visit( node.left )
-    right = s.visit( node.comparators[0] )
-
-    ret = Compare( left, op, right )
-    ret.ast = node
-    
-    return ret
-
-  #-----------------------------------------------------------------------
   # visit_Call
   #-----------------------------------------------------------------------
   # Some data types are interpreted as function calls in the Python AST
@@ -449,7 +182,7 @@ class UpblkRTLIRGenVisitor( ast.NodeVisitor ):
     # 2. Real function call: not supported yet
 
     # Deal with Bits instantiation
-    if obj.__name__.startswith( 'Bits' ) and obj.__name__[4:].isdigit():
+    if is_BitsX( obj ):
       nbits = obj.nbits
 
       if len( node.args ) != 1:
@@ -470,7 +203,7 @@ class UpblkRTLIRGenVisitor( ast.NodeVisitor ):
       return ret
 
     else:
-      # Only Bits class instantiation is supported
+      # Only Bits class instantiation is supported at L1
       raise PyMTLSyntaxError(
         s.blk, node, 'Expecting Bits object but found ' + obj.__name__
       )
@@ -534,41 +267,16 @@ class UpblkRTLIRGenVisitor( ast.NodeVisitor ):
   #-----------------------------------------------------------------------
 
   def visit_Name( s, node ):
-    if node.id in s.globals:
-      # free var from global name space
-      # return node.id
-      return FreeVar( node.id, s.globals[ node.id ] )
 
-    elif node.id in s.closure:
-      # free var from closure
-      obj = s.closure[ node.id ]
-      if isinstance( obj, RTLComponent ):
-        ret = Base( obj )
-      else:
-        ret = FreeVar( node.id, obj )
+    assert node.id in s.closure,\
+      "BehavioralTranslatorL1 expects all names from the local closure!"
 
-    else:
-      # Temporary variable
-      # This can be a LoopVar or a true temporary variable
-      if node.id in s.loop_var_env:
-        ret = LoopVar( node.id )
+    obj = s.closure[ node.id ]
 
-      # Else this is a temporary variable but not a loop index
+    assert isinstance( obj, RTLComponent ) and (obj is s.component),\
+      "BehavioralTranslatorL1 expects non-child components"
 
-      elif node.id in s.tmp_var_env:
-        # This temporaray variable has been registered
-        ret = TmpVar( node.id )
-
-      elif isinstance( node.ctx, ast.Load ):
-        # Trying to load an unregistered temporaray variable
-        raise PyMTLSyntaxError(
-          s.blk, node, 'tmpvar ' + node.id + ' used before assignment!'
-        )
-
-      else:
-        # This is the first time we see this tmp var
-        s.tmp_var_env.add( node.id )
-        ret = TmpVar( node.id )
+    ret = Base( obj )
 
     ret.ast = node
     return ret
@@ -582,9 +290,69 @@ class UpblkRTLIRGenVisitor( ast.NodeVisitor ):
     ret.ast = node
     return ret
 
-  #---------------------------------------------------------------------
+  #-----------------------------------------------------------------------
+  # AST node types not supported at L1
+  #-----------------------------------------------------------------------
+
+  #-----------------------------------------------------------------------
+  # visit_AugAssign
+  #-----------------------------------------------------------------------
+
+  def visit_AugAssign( s, node ): 
+    raise NotImplementedError()
+
+  #-----------------------------------------------------------------------
+  # visit_If
+  #-----------------------------------------------------------------------
+
+  def visit_If( s, node ):
+    raise NotImplementedError()
+
+  #-----------------------------------------------------------------------
+  # visit_For
+  #-----------------------------------------------------------------------
+
+  def visit_For( s, node ):
+    raise NotImplementedError()
+
+  #-----------------------------------------------------------------------
+  # visit_BoolOp
+  #-----------------------------------------------------------------------
+
+  def visit_BoolOp( s, node ):
+    raise NotImplementedError()
+
+  #-----------------------------------------------------------------------
+  # visit_BinOp
+  #-----------------------------------------------------------------------
+
+  def visit_BinOp( s, node ):
+    raise NotImplementedError()
+
+  #-----------------------------------------------------------------------
+  # visit_UnaryOp
+  #-----------------------------------------------------------------------
+
+  def visit_UnaryOp( s, node ):
+    raise NotImplementedError()
+
+  #-----------------------------------------------------------------------
+  # visit_IfExp
+  #-----------------------------------------------------------------------
+
+  def visit_IfExp( s, node ):
+    raise NotImplementedError()
+
+  #-----------------------------------------------------------------------
+  # visit_Compare
+  #-----------------------------------------------------------------------
+
+  def visit_Compare( s, node ):
+    raise NotImplementedError()
+
+  #-----------------------------------------------------------------------
   # TODO: Support some other AST nodes
-  #---------------------------------------------------------------------
+  #-----------------------------------------------------------------------
 
   # $display
   def visit_Print( s, node ):
@@ -598,9 +366,22 @@ class UpblkRTLIRGenVisitor( ast.NodeVisitor ):
   def visit_Assert( s, node ):
     raise
 
-  #---------------------------------------------------------------------
+  #-----------------------------------------------------------------------
+  # visit_Expr
+  #-----------------------------------------------------------------------
+  # ast.Expr might be useful when a statement is only a call to a task or 
+  # a non-returning function.
+
+  def visit_Expr( s, node ):
+    # Should only be useful as a call to SystemVerilog tasks
+    # Not implemented yet!
+    raise PyMTLSyntaxError(
+      s.blk, node, 'Task is not supported yet!'
+    )
+
+  #-----------------------------------------------------------------------
   # Explicitly invalid AST nodes
-  #---------------------------------------------------------------------
+  #-----------------------------------------------------------------------
 
   def visit_LambdaOp( s, node ):
     raise PyMTLSyntaxError( s.blk, node, 'invalid operation: lambda function' )

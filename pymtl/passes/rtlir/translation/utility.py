@@ -11,7 +11,6 @@ from collections import defaultdict, deque
 
 from pymtl       import *
 from pymtl.passes.utility import freeze
-from ..RTLIRType import get_type
 
 #-------------------------------------------------------------------------
 # gen_connections
@@ -84,15 +83,30 @@ def get_topmost_member( model, signal ):
   return sig
 
 #-------------------------------------------------------------------------
-# gen_type_env
+# is_BitsX
 #-------------------------------------------------------------------------
 
-def gen_type_env( top ):
+def is_BitsX( obj ):
+  """Is obj a BitsX class?"""
 
-  ret = {}
+  try:
+    if obj.__name__.startswith( 'Bits' ):
+      try:
+        n = int( obj.__name__[4:] )
+        return True
+      except:
+        return False
+  except:
+    return False
 
-  Type = get_type( top )
-  ret[ freeze( top ) ] = Type
-  ret.update( Type.type_env )
+  return False
 
-  return ret
+#-------------------------------------------------------------------------
+# freeze
+#-------------------------------------------------------------------------
+
+def freeze( obj ):
+
+  if isinstance( obj, list ):
+    return tuple( freeze( o ) for o in obj )
+  return obj

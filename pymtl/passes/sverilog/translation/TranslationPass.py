@@ -8,9 +8,9 @@
 # Date   : March 12, 2019
 
 from pymtl.passes import BasePass, PassMetadata
-from SVRTLIRTrans import SVRTLIRTrans
+from SVRTLIRTranslator import SVRTLIRTranslator
 
-def mk_TranslationPass( _SVRTLIRTrans ):
+def mk_TranslationPass( _SVRTLIRTranslator ):
 
   class _TranslationPass( BasePass ):
 
@@ -19,7 +19,7 @@ def mk_TranslationPass( _SVRTLIRTrans ):
       if not hasattr( top, '_pass_sverilog_translation' ):
         top._pass_sverilog_translation = PassMetadata()
 
-      translator = _SVRTLIRTrans( top )
+      translator = _SVRTLIRTranslator( top )
       translator.translate()
 
       module_name = translator.component[top].component_name
@@ -37,4 +37,4 @@ def mk_TranslationPass( _SVRTLIRTrans ):
 
   return _TranslationPass
 
-TranslationPass = mk_TranslationPass( SVRTLIRTrans )
+TranslationPass = mk_TranslationPass( SVRTLIRTranslator )

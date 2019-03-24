@@ -13,7 +13,7 @@ from pymtl                        import *
 
 from pymtl.passes.rtlir           import get_type
 from pymtl.passes.utility         import *
-from pymtl.passes.rtlir.RTLIRType import Struct, BaseRTLIRType
+# from pymtl.passes.rtlir           import BaseBehavioralRTLIRType
 
 from RTLIRTypeString import rtlir_to_str
 

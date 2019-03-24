@@ -1,14 +1,15 @@
 #=========================================================================
-# SVBehavioralConstraintTrans.py
+# SVBehavioralTranslatorL2.py
 #=========================================================================
 # Provide the actual backend implementation of all virtual methods defined
 # in ConstraintTrans.py.
 # Author : Peitian Pan
 # Date   : March 18, 2019
 
-from pymtl.passes.rtlir.translation.behavioral import BehavioralConstraintTrans
+from SVBehavioralTranslatorL1 import SVBehavioralTranslatorL1
+from pymtl.passes.rtlir.translation.behavioral import BehavioralTranslatorL2
 
-class SVBehavioralConstraintTrans( BehavioralConstraintTrans ):
+class SVBehavioralTranslatorL2( SVBehavioralTranslatorL1, BehavioralTranslatorL2 ):
 
   @staticmethod
   def rtlir_tr_constraints( constraints ):

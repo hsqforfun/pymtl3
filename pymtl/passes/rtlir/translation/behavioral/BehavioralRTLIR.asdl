@@ -2,7 +2,7 @@
 -- identifier, int, string, object, bool are the five built-in types of
 -- Zephyr ASDL
 
-module RTLIR
+module BehavioralRTLIR
 {
   upblk = CombUpblk( string name, stmt* body )
         | SeqUpblk( string name, stmt* body )

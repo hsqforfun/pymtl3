@@ -1,5 +1,5 @@
 #=========================================================================
-# RTLIRImplGen.py
+# BehavioralRTLIRImplGen.py
 #=========================================================================
 # This file generates (1) the implementation of the RTLIR ASDL defined in
 # RTLIR.asdl which should reside in the same directory as this file and 
@@ -20,7 +20,7 @@ class constructor( object ):
 
   impl_template =\
 """
-class {constr_name}( BaseRTLIR ):
+class {constr_name}( BaseBehavioralRTLIR ):
   def __init__( s{params_name} ):
     {params_assign}
 
@@ -427,10 +427,10 @@ def implement_module( module_str ):
 
   impl_str += constructor.rast_visitor_str
 
-  with open( 'RTLIR.py', 'w' ) as output:
+  with open( 'BehavioralRTLIR.py', 'w' ) as output:
     output.write( impl_str )
 
-  with open( 'RTLIRVisualizationPass.py', 'w' ) as output:
+  with open( 'BehavioralRTLIRVisualizationPass.py', 'w' ) as output:
     output.write( viz_impl_str )
 
 def extract_module( asdl_str ):
@@ -448,7 +448,7 @@ def extract_module( asdl_str ):
 # This file should be run first to generate the correct implementation 
 # of RTLIR.
 if __name__ == '__main__':
-  with open( 'RTLIR.asdl', 'r') as asdl_file:
+  with open( 'BehavioralRTLIR.asdl', 'r') as asdl_file:
     asdl_str = ''
     for line in asdl_file:
       if line.strip().startswith( '--' ) or ( not line.strip() ):
@@ -457,6 +457,6 @@ if __name__ == '__main__':
 
     # RTLIR module is the first one in the file
     module_name, module_str = extract_module( asdl_str )
-    assert module_name == 'RTLIR'
+    assert module_name == 'BehavioralRTLIR'
 
     implement_module( module_str )

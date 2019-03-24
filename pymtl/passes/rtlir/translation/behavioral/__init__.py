@@ -1,6 +1,7 @@
 
-from BehavioralTrans import BehavioralTrans
+from BehavioralRTLIR import BehavioralRTLIRNodeVisitor
+from BehavioralTranslatorL1 import BehavioralTranslatorL1
+from BehavioralTranslatorL2 import BehavioralTranslatorL2
 
-from BehavioralUpblkTrans import BehavioralUpblkTrans
-
-from BehavioralConstraintTrans import BehavioralConstraintTrans
+from BehavioralRTLIRGenL1Pass import BehavioralRTLIRGenL1Pass\
+    as BehavioralRTLIRGenPass

@@ -10,26 +10,45 @@
 import inspect, copy
 
 #-------------------------------------------------------------------------
+# is_of_type
+#-------------------------------------------------------------------------
+
+def is_of_type( obj, Type ):
+  """Is obj Type or contains Type?"""
+  if isinstance( obj, Type ):
+    return True
+  if isinstance( obj, list ):
+    return reduce( lambda x, y: x and is_of_type( y, Type ), obj, True )
+  return False
+
+#-------------------------------------------------------------------------
 # collect_objs
 #-------------------------------------------------------------------------
 # Return a list of members of `m` that are or include `Type` ports.
 
-def collect_objs( m, Type ):
+def collect_objs( m, Type, grouped=False ):
 
-  # def is_of_type( obj, Type ):
-    # """Is obj Type or contains Type?"""
-    # if isinstance( obj, Type ):
-      # return True
-    # if isinstance( obj, list ):
-      # return reduce( lambda x, y: x and is_of_type( y, Type ), obj, True )
-    # return False
+  def ungroup_list( obj ):
+    assert isinstance( obj, list )
+    ret = []
+    for _obj in obj:
+      if isinstance( _obj, list ):
+        ret += ungroup_list( _obj )
+      else:
+        ret.append( ( _obj._dsl.my_name, _obj ) )
+    return ret
 
   ret = []
   for name, obj in m.__dict__.iteritems():
     if isinstance( name, basestring ) and not name.startswith( '_' ):
-      if isinstance( obj, Type ):
-      # if is_of_type( obj, Type ):
-        ret.append( ( name, obj ) )
+      if is_of_type( obj, Type ):
+        if isinstance( obj, list ):
+          if not grouped:
+            ret.extend( ungroup_list( obj ) )
+          else:
+            ret.append( ( name, obj ) )
+        else:
+          ret.append( ( name, obj ) )
   return ret
 
 #-------------------------------------------------------------------------

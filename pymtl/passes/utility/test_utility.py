@@ -42,26 +42,11 @@ def expected_failure( exception = Exception ):
   try:
     yield
   except exception:
-    pass
+    return
   except:
-    raise Exception( func.__name__ + ' test unexpectedly passed!' )
+    raise
 
-#-------------------------------------------------------------------------
-# gen_rtlir_trans_label
-#-------------------------------------------------------------------------
-
-def gen_rtlir_trans_label( structural_levels, behavioral_levels ):
-
-  s_levels = [
-    structural_levels['dtype'], structural_levels['decl'],
-    structural_levels['connection']
-  ]
-
-  b_levels = [
-    behavioral_levels['upblk'], behavioral_levels['constraint']
-  ]
-
-  return reduce( lambda x, y: x+str(y), s_levels+b_levels, '' )
+  raise Exception( func.__name__ + ' test unexpectedly passed!' )
 
 #-------------------------------------------------------------------------
 # gen_rtlir_translator
@@ -69,29 +54,30 @@ def gen_rtlir_trans_label( structural_levels, behavioral_levels ):
 
 _rtlir_translators = {}
 
-def gen_rtlir_translator( structural_levels, behavioral_levels ):
+def gen_rtlir_translator( structural_level, behavioral_level ):
 
-  s_levels = [
-    structural_levels['dtype'], structural_levels['decl'],
-    structural_levels['connection']
-  ]
-
-  b_levels = [
-    behavioral_levels['upblk'], behavioral_levels['constraint']
-  ]
-
-  label = gen_rtlir_trans_label( structural_levels, behavioral_levels )
+  label = str( structural_level ) + str( behavioral_level )
 
   if label in _rtlir_translators: return _rtlir_translators[ label ]
 
-  from pymtl.passes.rtlir.translation.structural.StructuralTrans\
-      import mk_StructuralTrans
-  from pymtl.passes.rtlir.translation.behavioral.BehavioralTrans\
-      import mk_BehavioralTrans
-  from pymtl.passes.rtlir.translation.RTLIRTrans import mk_RTLIRTrans
+  assert 1 <= structural_level <= 1
+  assert 1 <= behavioral_level <= 2
 
-  _rtlir_translators[ label ] = mk_RTLIRTrans(
-    mk_StructuralTrans( *s_levels ), mk_BehavioralTrans( *b_levels )
+  if structural_level == 1:
+    from pymtl.passes.rtlir.translation.structural\
+      import StructuralTranslatorL1 as _StructuralTranslator
+
+  if behavioral_level == 1:
+    from pymtl.passes.rtlir.translation.behavioral\
+      import BehavioralTranslatorL1 as _BehavioralTranslator
+  elif behavioral_level == 2:
+    from pymtl.passes.rtlir.translation.behavioral\
+      import BehavioralTranslatorL2 as _BehavioralTranslator
+  
+  from pymtl.passes.rtlir.translation.RTLIRTranslator import mk_RTLIRTranslator
+
+  _rtlir_translators[ label ] = mk_RTLIRTranslator(
+    _BehavioralTranslator, _StructuralTranslator
   )
 
   return _rtlir_translators[ label ]
@@ -102,15 +88,15 @@ def gen_rtlir_translator( structural_levels, behavioral_levels ):
 
 _backend_translators = {}
 
-def gen_translation_pass( mk_pass, mk_backend_trans, structural_levels,
-    behavioral_levels ):
+def gen_translation_pass( mk_pass, mk_backend_trans, structural_level,
+    behavioral_level ):
 
-  label = gen_rtlir_trans_label( structural_levels, behavioral_levels )
+  label = str( structural_level ) + str( behavioral_level )
 
   if label in _backend_translators:
     return mk_pass( _backend_translators[ label ] )
 
-  rtlir_trans = gen_rtlir_translator( structural_levels, behavioral_levels )
+  rtlir_trans = gen_rtlir_translator( structural_level, behavioral_level )
 
   _backend_translators[ label ] = mk_backend_trans( rtlir_trans )
 

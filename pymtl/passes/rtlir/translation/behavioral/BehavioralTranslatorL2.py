@@ -1,5 +1,5 @@
 #=========================================================================
-# BehavioralConstraintTrans.py
+# BehavioralTranslatorL2.py
 #=========================================================================
 # This translator convert the constraint DAG into a sensitivity group file
 # that can be used to import the translated top module back to PyMTL.
@@ -16,30 +16,23 @@ from copy                    import copy
 from pymtl                   import *
 from pymtl.passes.simulation import GenDAGPass
 
-from BaseBehavioralTrans     import BaseBehavioralTrans
+from BehavioralTranslatorL1     import BehavioralTranslatorL1
 from ..utility               import get_topmost_member
 
-class BehavioralConstraintTrans( BaseBehavioralTrans ):
+class BehavioralTranslatorL2( BehavioralTranslatorL1 ):
 
   # Override
   def __init__( s, top ):
 
-    super( BehavioralConstraintTrans, s ).__init__( top )
+    super( BehavioralTranslatorL2, s ).__init__( top )
 
-    s.gen_constraint_trans_metadata( top )
-
-  # Override
-  def translate( s ):
-
-    super( BehavioralConstraintTrans, s ).translate()
-
-    s.translate_constraints( s.top )
+    s.gen_behavioral_trans_l2_metadata( top )
 
   #-----------------------------------------------------------------------
-  # gen_constraint_trans_metadata
+  # gen_behavioral_trans_l2_metadata
   #-----------------------------------------------------------------------
 
-  def gen_constraint_trans_metadata( s, top ):
+  def gen_behavioral_trans_l2_metadata( s, top ):
 
     # Collect all vertices and edges of the constraint DAG
     top.apply( GenDAGPass() )
@@ -92,10 +85,12 @@ class BehavioralConstraintTrans( BaseBehavioralTrans ):
             s.behavioral.net[ rd_signal ] = copy( wr_signals )
 
   #-----------------------------------------------------------------------
-  # translate_constraints
+  # translate_behavioral
   #-----------------------------------------------------------------------
 
-  def translate_constraints( s, top ):
+  def translate_behavioral( s, top ):
+
+    super( BehavioralTranslatorL2, s ).translate_behavioral( top )
 
     # Initialize the output port sensitivity group to 'not connected'
     top_inports  = top.get_input_value_ports()
@@ -129,14 +124,14 @@ class BehavioralConstraintTrans( BaseBehavioralTrans ):
         elif comb and not seq:     prefix = 'C'
         elif not comb and seq:     prefix = 'S'
 
-        inport_strs.append( s.__class__.rtlir_tr_signal_name(
+        inport_strs.append( s.__class__.rtlir_tr_var_name(
           inport._dsl.my_name
         ) )
         inport_connection.append( prefix )
 
       constraint_src.append( s.__class__.rtlir_tr_constraint(
         inport_strs, inport_connection,
-        s.__class__.rtlir_tr_signal_name( outport._dsl.my_name )
+        s.__class__.rtlir_tr_var_name( outport._dsl.my_name )
       ) )
 
     # Store the callback function return value for final assembly

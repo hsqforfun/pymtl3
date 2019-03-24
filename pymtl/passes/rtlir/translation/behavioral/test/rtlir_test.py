@@ -9,10 +9,10 @@
 import pytest
 
 from pymtl                             import *
-from pymtl.passes.rtlir.RTLIR          import *
+from pymtl.passes.rtlir.translation.behavioral.BehavioralRTLIR import *
 from pymtl.passes.utility.test_utility import expected_failure, do_test
 
-from ..UpblkRTLIRGenPass               import UpblkRTLIRGenPass
+from .. import BehavioralRTLIRGenPass
 from ..errors                          import PyMTLTypeError
 
 #-------------------------------------------------------------------------
@@ -24,10 +24,10 @@ from ..errors                          import PyMTLTypeError
 def local_do_test( m ):
   ref = m._rtlir_test_ref
   m.elaborate()
-  UpblkRTLIRGenPass()( m )
+  BehavioralRTLIRGenPass()( m )
 
   for blk in m.get_update_blocks():
-    assert m._pass_upblk_rtlir_gen.rtlir_upblks[ blk ] == ref[ blk.__name__ ]
+    assert m._pass_behavioral_rtlir_gen.rtlir_upblks[ blk ] == ref[ blk.__name__ ]
 
 #-------------------------------------------------------------------------
 # test_index_basic

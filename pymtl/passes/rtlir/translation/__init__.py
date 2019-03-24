@@ -1,2 +1,2 @@
 
-from RTLIRTrans import RTLIRTrans
+from RTLIRTranslator import RTLIRTranslator

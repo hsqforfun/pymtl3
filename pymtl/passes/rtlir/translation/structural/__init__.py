@@ -1,8 +1,2 @@
 
-from StructuralTrans import StructuralTrans
-
-from StructuralDTypeTransL1 import StructuralDTypeTransL1
-
-from StructuralDeclTransL1 import StructuralDeclTransL1
-
-from StructuralConnectionTransL1 import StructuralConnectionTransL1
+from StructuralTranslatorL1 import StructuralTranslatorL1
