@@ -3,7 +3,7 @@
 #=========================================================================
 # Tests with value ports and connections, no upblks.
 
-import pytest, sys, linecache
+import pytest, sys, linecache, os
 
 import hypothesis.strategies as st
 from   hypothesis import given, settings, HealthCheck, unlimited, seed,\
@@ -526,6 +526,10 @@ def test_s1_b0_hypothesis( do_test, component_str ):
   print '============================================='
   print component_src
   print input_data
+
+  if not os.getcwd() in sys.path:
+
+    sys.path.append( os.getcwd() )
 
   with open( 'TestComponent.py', 'w' ) as output:
 

@@ -65,7 +65,6 @@ def check_schedule( top, schedule, V, E, in_degree, dump_graph ):
   assert schedule
 
   if len(schedule) != len(V) or dump_graph:
-    from graphviz import Digraph
     dot = Digraph()
     dot.graph_attr["rank"] = "same"
     dot.graph_attr["ratio"] = "compress"
