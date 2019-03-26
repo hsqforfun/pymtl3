@@ -65,8 +65,14 @@ def generate_py_wrapper( interface, ports, top_name, lib_file, port_cdefs, ssg_n
     
     make_indent( constraints, 3 )
 
+    # constraint_str = '' if constraints is [] else \
+      # 's.add_constraints(\n{}\n    )'.format(
+        # '\n'.join( constraints )
+      # )
+
     constraint_str = '' if constraints is [] else \
-      's.add_constraints(\n{}\n    )'.format(
+      'constraint_list = [\n{}\n    ]\n\n\
+    s.add_constraints( *constraint_list )\n'.format(
         '\n'.join( constraints )
       )
 

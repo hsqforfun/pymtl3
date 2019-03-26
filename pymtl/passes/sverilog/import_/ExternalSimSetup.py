@@ -14,7 +14,7 @@ import os, shutil, subprocess, copy
 from pymtl.passes.utility.pass_utility import make_indent
 
 from errors  import VerilatorCompilationError, PyMTLImportError
-from helpers import generate_signal_decl_c, generate_signal_init_c
+from helpers import *
 
 #-----------------------------------------------------------------------
 # setup_external_sim
@@ -59,6 +59,10 @@ def create_verilator_model( sv_name, top_name ):
     shutil.rmtree( obj_dir )
 
   # Try to call verilator
+
+  print 'Modification timestamp of {}.sv: {}'.format(
+      sv_name, os.path.getmtime( sv_name + '.sv' )
+  )
 
   try:
     subprocess.check_output( cmd, stderr = subprocess.STDOUT, shell = True )
@@ -106,6 +110,17 @@ def create_verilator_c_wrapper( top_name, interface ):
   make_indent( port_inits, 1 )
 
   port_inits = '\n'.join( port_inits )
+
+  # Generate debug prints
+
+  port_print = []
+
+  for name, port in interface:
+    port_print.append( generate_signal_print_c( name, port ) )
+
+  make_indent( port_print, 1 )
+
+  port_print = '\n'.join( port_print )
 
   # Fill in the C wrapper template
 
@@ -193,6 +208,10 @@ def create_shared_lib( wrapper_name, top_name ):
   )
 
   # Try to call the C compiler
+
+  print 'Modification timestamp of {}: {}'.format(
+      wrapper_name, os.path.getmtime( wrapper_name )
+  )
 
   try:
     subprocess.check_output( cmd, stderr = subprocess.STDOUT, shell = True )

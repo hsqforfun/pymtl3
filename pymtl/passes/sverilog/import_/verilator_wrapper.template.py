@@ -18,6 +18,8 @@ class {top_name}( RTLComponent ):
 
   def __init__( s ):
 
+    s._finalization_count = 0
+
     # initialize FFI, define the exposed interface
     s.ffi = FFI()
     s.ffi.cdef('''
@@ -41,6 +43,10 @@ class {top_name}( RTLComponent ):
     # construction to the elaborate_logic function to allow the user to
     # set the vcd_file.
 
+    print 'Modification time of {{}}: {{}}'.format(
+      '{lib_file}', os.path.getmtime( './{lib_file}' )
+    )
+
     s._ffi_inst = s.ffi.dlopen('./{lib_file}')
 
     # dummy class to emulate PortBundles
@@ -50,14 +56,22 @@ class {top_name}( RTLComponent ):
     # increment instance count
     {top_name}.id_ += 1
 
-  def __del__( s ):
-    # s._ffi_inst.destroy_model( s._ffi_m )
+  def finalize( s ):
+    assert s._finalization_count == 0,\
+      'Imported component can only be finalized once!'
+    s._finalization_count += 1
+    s._ffi_inst.destroy_model( s._ffi_m )
     s.ffi.dlclose( s._ffi_inst )
-    # Deref the cffi objects so that GC can work. We need this because 
-    # the linked shared library seems to be cached somewhere. Simply call 
-    # dlclose() does not work. 
     s.ffi = None
     s._ffi_inst = None
+
+  def __del__( s ):
+    if s._finalization_count == 0:
+      s._finalization_count += 1
+      s._ffi_inst.destroy_model( s._ffi_m )
+      s.ffi.dlclose( s._ffi_inst )
+      s.ffi = None
+      s._ffi_inst = None
 
   def construct( s ):
 

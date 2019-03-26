@@ -129,8 +129,8 @@ class StructuralTranslatorL1( BaseRTLIRTranslator ):
 
   def translate_connections( s, m ):
 
-    m_connections = {}
-    m_connections.update( s.structural.connections_self_self[m] )
+    m_connections = set()
+    m_connections |= ( s.structural.connections_self_self[m] )
 
     connections   = []
     connect_order = m.get_connect_order()
@@ -289,6 +289,15 @@ class StructuralTranslatorL1( BaseRTLIRTranslator ):
 
   def dtype_tr_signal( s, obj, m ):
 
+    def is_singleton_slice( Slice ):
+
+      if Slice is None: return False
+      
+      assert Slice.start != None and Slice.stop != None,\
+        'the start and stop of a slice cannot be None!'
+
+      return Slice.stop == Slice.start+1
+
     # L1: obj must be a signal that belongs to the current component. No
     # subcomponent is allowed at this level.
 
@@ -298,8 +307,16 @@ class StructuralTranslatorL1( BaseRTLIRTranslator ):
 
       # Bit slicing and bit indexing
 
+      parent = obj._dsl.parent_obj
+
+      if is_singleton_slice(parent._dsl.slice) and is_singleton_slice(Slice):
+
+        # Slicing on a 1-bit is not supported by verilator
+
+        return s.dtype_tr_signal( parent, m )
+
       return s.__class__.rtlir_tr_bit_slice(
-        s.dtype_tr_signal( obj._dsl.parent_obj ),
+        s.dtype_tr_signal( obj._dsl.parent_obj, m ),
         Slice.start, Slice.stop, Slice.step
       )
 

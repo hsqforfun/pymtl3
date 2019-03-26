@@ -29,11 +29,16 @@ class SVStructuralTranslatorL1( StructuralTranslatorL1 ):
   @staticmethod
   def rtlir_tr_bit_slice( base_signal, start, stop, step ):
     if stop == start+1:
-      # Bit indexing
-      return '[{}]'.format( start )
+      return '{base_signal}[{start}]'.format( **locals() )
+      # Treat bit indexing as slicing because this allows multiple
+      # indexing and slicing on top of existing operations.
+      # Update: this does not work in verilator...
+      # _stop = stop-1
+      # return '{base_signal}[{_stop}:{start}]'.format( **locals() )
     else:
       assert (step is None) or (step == 1)
-      return '[{}:{}]'.format( stop-1, start )
+      _stop = stop-1
+      return '{base_signal}[{_stop}:{start}]'.format( **locals() )
 
   @staticmethod
   def rtlir_tr_port_decls( port_decls ):
@@ -93,13 +98,17 @@ module {module_name}
 
 {upblk_srcs}
 
+{connections}
+
 endmodule
 """
-    module_name = component_nspace.component_name
-    const_decls = component_nspace.const_decls
-    port_decls  = component_nspace.port_decls
-    wire_decls  = component_nspace.wire_decls
-    upblk_srcs  = component_nspace.upblk_srcs
+
+    module_name = getattr( component_nspace, 'component_name', '' )
+    const_decls = getattr( component_nspace, 'const_decls', '' )
+    port_decls = getattr( component_nspace, 'port_decls', '' )
+    wire_decls = getattr( component_nspace, 'wire_decls', '' )
+    upblk_srcs = getattr( component_nspace, 'upblk_srcs', '' )
+    connections = getattr( component_nspace, 'connections', '' )
 
     return template.format( **locals() )
 
@@ -110,4 +119,3 @@ endmodule
   @staticmethod
   def rtlir_tr_var_name( signal_name ):
     return signal_name.replace( '[', '_' ).replace( ']', '_' )
-

@@ -1,2 +1,4 @@
 
-from SVBehavioralTranslatorL2 import SVBehavioralTranslatorL2 as SVBehavioralTranslator
+from SVBehavioralTranslatorL0 import SVBehavioralTranslatorL0
+from SVBehavioralTranslatorL1 import SVBehavioralTranslatorL1
+from SVBehavioralTranslatorL2 import SVBehavioralTranslatorL2

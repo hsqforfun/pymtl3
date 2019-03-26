@@ -13,7 +13,9 @@ from pymtl.passes.rtlir.translation.behavioral\
     import BehavioralRTLIRNodeVisitor, BehavioralTranslatorL1
 from pymtl.passes.rtlir.translation.behavioral.BehavioralRTLIR import *
 
-class SVBehavioralTranslatorL1( BehavioralTranslatorL1 ):
+from SVBehavioralTranslatorL0 import SVBehavioralTranslatorL0
+
+class SVBehavioralTranslatorL1( SVBehavioralTranslatorL0, BehavioralTranslatorL1 ):
 
   @staticmethod
   def rtlir_tr_upblk_decls( upblk_srcs ):

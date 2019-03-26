@@ -1,5 +1,6 @@
 
 from BehavioralRTLIR import BehavioralRTLIRNodeVisitor
+from BehavioralTranslatorL0 import BehavioralTranslatorL0
 from BehavioralTranslatorL1 import BehavioralTranslatorL1
 from BehavioralTranslatorL2 import BehavioralTranslatorL2
 

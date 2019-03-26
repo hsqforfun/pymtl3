@@ -100,8 +100,16 @@ void eval( V{top_name}_t * m ) {{
 
   V{top_name} * model = (V{top_name} *) m->model;
 
+  printf( "Before calling eval():\n" );
+
+{port_print}
+
   // evaluate one time step
   model->eval();
+
+  printf( "\nAfter calling eval():\n" );
+
+{port_print}
 
 }}
 

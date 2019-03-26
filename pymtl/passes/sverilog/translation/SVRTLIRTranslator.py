@@ -9,17 +9,24 @@
 
 from pymtl.passes.rtlir.translation import RTLIRTranslator
 
-from behavioral import SVBehavioralTranslator
-from structural import SVStructuralTranslator
+def mk_SVRTLIRTranslator( _RTLIRTranslator, b_level=1, s_level=1 ):
 
-def mk_SVRTLIRTranslator(
-    _RTLIRTranslator,
-    _SVBehavioralTranslator = SVBehavioralTranslator,
-    _SVStructuralTranslator = SVStructuralTranslator
-  ):
+  assert 0 <= b_level <= 2 and 1 <= s_level <= 1
+
+  if b_level == 0:
+    from behavioral import SVBehavioralTranslatorL0 as SVBehavioralTranslator
+  elif b_level == 1:
+    from behavioral import SVBehavioralTranslatorL1 as SVBehavioralTranslator
+  elif b_level == 2:
+    from behavioral import SVBehavioralTranslatorL2 as SVBehavioralTranslator
+  else: assert False
+
+  if s_level == 1:
+    from structural import SVStructuralTranslatorL1 as SVStructuralTranslator
+  else: assert False
 
   class _SVRTLIRTranslator(
-      _RTLIRTranslator, _SVBehavioralTranslator, _SVStructuralTranslator
+      _RTLIRTranslator, SVBehavioralTranslator, SVStructuralTranslator
     ):
 
     @staticmethod
@@ -37,6 +44,4 @@ def mk_SVRTLIRTranslator(
 
   return _SVRTLIRTranslator
 
-SVRTLIRTranslator = mk_SVRTLIRTranslator(
-    RTLIRTranslator, SVBehavioralTranslator, SVStructuralTranslator
-  )
+SVRTLIRTranslator = mk_SVRTLIRTranslator( RTLIRTranslator )

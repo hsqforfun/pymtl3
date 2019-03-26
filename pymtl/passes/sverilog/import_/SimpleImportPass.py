@@ -8,7 +8,7 @@
 # Author : Peitian Pan
 # Date   : Oct 18, 2018
 
-import os, re, sys, shutil 
+import os, re, sys, shutil, linecache
 
 from pymtl            import *
 from pymtl.passes     import BasePass, PassMetadata
@@ -45,7 +45,8 @@ class SimpleImportPass( BasePass ):
     # Generate the interface structure
 
     interface =\
-      collect_objs( model, InVPort ) + collect_objs( model, OutVPort )
+      collect_objs( model, InVPort ) +\
+      collect_objs( model, OutVPort )
 
     ports = sorted(
       model.get_input_value_ports() | model.get_output_value_ports(),
@@ -68,6 +69,8 @@ class SimpleImportPass( BasePass ):
 
     if not os.getcwd() in sys.path:
       sys.path.append( os.getcwd() )
+
+    linecache.checkcache()
 
     # Import the model from python wrapper
 

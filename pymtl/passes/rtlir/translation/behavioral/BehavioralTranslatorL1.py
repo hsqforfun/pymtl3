@@ -8,7 +8,8 @@
 import ast
 
 from ..utility import *
-from ..BaseRTLIRTranslator import BaseRTLIRTranslator, TranslatorMetadata
+from ..BaseRTLIRTranslator import TranslatorMetadata
+from BehavioralTranslatorL0 import BehavioralTranslatorL0
 
 from BehavioralRTLIRGenL1Pass import BehavioralRTLIRGenL1Pass
 from BehavioralRTLIRTypeCheckL1Pass import BehavioralRTLIRTypeCheckL1Pass
@@ -17,7 +18,7 @@ from BehavioralRTLIR       import *
 from BehavioralRTLIRTypeL1 import BaseBehavioralRTLIRType
 from errors                import PyMTLSyntaxError
 
-class BehavioralTranslatorL1( BaseRTLIRTranslator ):
+class BehavioralTranslatorL1( BehavioralTranslatorL0 ):
 
   def __init__( s, top ):
 

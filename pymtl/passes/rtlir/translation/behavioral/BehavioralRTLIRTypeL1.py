@@ -70,7 +70,7 @@ class BaseBehavioralRTLIRType( object ):
         'Elements of list ' + str(obj) + ' must have the same RTLIR type!'
 
       for _obj, _Type in zip( obj, type_list ):
-        type_env[ _obj ] = _Type
+        type_env[ freeze(_obj) ] = _Type
         try:
           type_env.update( _Type.type_env )
         except:

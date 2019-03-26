@@ -7,10 +7,58 @@
 # Author : Peitian Pan
 # Date   : Feb 22, 2019
 
+from pymtl import *
+
 from pymtl.passes.utility.pass_utility import make_indent
 from pymtl.passes.rtlir                import get_type
 
 from RTLIRTypeString import rtlir_to_str
+
+#-------------------------------------------------------------------------
+# verilog_name
+#-------------------------------------------------------------------------
+
+def verilog_name( name ):
+
+  return name.replace('[', '_').replace(']', '_')
+
+#-------------------------------------------------------------------------
+# verilator_name
+#-------------------------------------------------------------------------
+
+def verilator_name( name ):
+
+  return verilog_name(name).replace('__', '___05F')
+
+#-------------------------------------------------------------------------
+# pymtl_name
+#-------------------------------------------------------------------------
+
+def pymtl_name( name ):
+
+  return verilator_name( name )
+
+#-------------------------------------------------------------------------
+# generate_signal_print_c
+#-------------------------------------------------------------------------
+
+def generate_signal_print_c( name, port ):
+
+  # type_str = get_type( port ).type_str()
+  type_str = rtlir_to_str( get_type( port ) )
+
+  nbits = type_str[ 'nbits' ]
+
+  if    nbits <= 8:  fspec = 'x'
+  elif  nbits <= 16: fspec = 'x'
+  elif  nbits <= 32: fspec = 'x'
+  elif  nbits <= 64: fspec = 'x'
+  else:              fspec = 'x'
+
+  name = verilator_name( name )
+
+  return\
+    'printf( "{name} = %{fspec}\\n", model->{name} );'.format(**locals())
 
 #-------------------------------------------------------------------------
 # generate_signal_decl_c
@@ -29,6 +77,8 @@ def generate_signal_decl_c( name, port ):
   elif  nbits <= 64: data_type = 'unsigned long'
   else:              data_type = 'unsigned int'
 
+  name = verilator_name( name )
+
   return '{data_type} * {name}{c_dim_size};'.format(
     data_type = data_type, name = name,
     c_dim_size = type_str[ 'c_dim_size' ]
@@ -46,6 +96,8 @@ def generate_signal_init_c( name, port ):
 
   nbits     = type_str[ 'nbits' ]
   deference = '&' if nbits <= 64 else ''
+
+  name = verilator_name( name )
 
   if type_str[ 'c_dim_size' ] != '':
     # This is a potentially recursive array structure
@@ -105,7 +157,7 @@ def load_ssg( ssg_name ):
   except IOError:
     ssg = None
 
-  return ssg
+  return None if ssg == [] else ssg
 
 #-------------------------------------------------------------------------
 # generate_default_ssg
@@ -132,6 +184,8 @@ def generate_signal_decl_py( name, port ):
 
   # type_str = get_type( port ).type_str()
   type_str = rtlir_to_str( get_type( port ) )
+
+  name = pymtl_name( name )
 
   nbits = type_str[ 'nbits' ]
   dtype_str = type_str[ 'py_type' ]
@@ -189,12 +243,13 @@ def generate_seq_upblk_py( ports, ssg ):
   # Generate input assignments and constraints
 
   for in_port in seq_in_ports:
+    name = pymtl_name( in_port )
     for idx, offset in get_indices( port_objs[ in_port ] ):
       set_inputs.append( 's._ffi_m.{name}[{idx}] = s.{name}{offset}'.format(
-        name = in_port, idx = idx, offset = offset
+        **locals()
       ) )
 
-    constraints.append( 'U(tick_sequential) < WR(s.{}),'.format( in_port ) )
+    constraints.append( 'U(tick_sequential) < WR(s.{}),'.format( name ) )
 
   make_indent( set_inputs, 3 )
 
@@ -252,19 +307,20 @@ def generate_comb_upblks_py( ports, ssg ):
     set_inputs = []
 
     for in_port in inports:
+      name = pymtl_name(in_port)
       for idx, offset in get_indices( port_objs[ in_port ] ):
         set_inputs.append( 's._ffi_m.{name}[{idx}] = s.{name}{offset}'.format(
-          name = in_port, idx = idx, offset = offset
+          **locals()
         ) )
 
-      constraints.append( 'U(comb_eval_{idx}) < WR(s.{name}),'.format(
-        idx = upblk_num, name = in_port
+      constraints.append( 'U(comb_eval_{upblk_num}) < WR(s.{name}),'.format(
+        **locals()
       ) )
 
     make_indent( set_inputs, 3 )
 
-    constraints.append( 'U(comb_eval_{idx}) < U(readout_{idx}),'.format(
-      idx = upblk_num
+    constraints.append( 'U(comb_eval_{upblk_num}) < U(readout_{idx}),'.format(
+      **locals()
     ) )
 
     # Fill in the comb upblk template
@@ -292,7 +348,7 @@ def generate_readout_upblks_py( ports, ssg ):
   readout_tplt = """
     @s.update
     def readout_{idx}():
-      {read_outputs}"""
+{read_outputs}"""
 
   for upblk_num, ( out, in_ ) in enumerate( ssg ):
     read_outputs = []
@@ -300,12 +356,14 @@ def generate_readout_upblks_py( ports, ssg ):
     for outport in out:
       for idx, offset in get_indices( port_objs[ outport ] ):
         read_outputs.append( 's.{name}{offset} = s._ffi_m.{name}[{idx}]'.format(
-          name = outport, offset = offset, idx = idx
+          name = pymtl_name(outport), offset = offset, idx = idx
         ) )
 
-        constraints.append( 'U(readout_{idx}) < RD(s.{name}),'.format(
-          idx = upblk_num, name = outport
-        ) )
+      constraints.append( 'U(readout_{idx}) < RD(s.{name}),'.format(
+        idx = upblk_num, name = pymtl_name(outport)
+      ) )
+
+    make_indent( read_outputs, 3 )
 
     readout_upblk = readout_tplt.format(
       idx = upblk_num, read_outputs = '\n'.join( read_outputs )
@@ -325,12 +383,12 @@ def generate_line_trace_py( ports ):
   ret = "'"
 
   for port in ports:
-    ret += '{my_name}: {{}}, '.format( my_name = port._dsl.my_name )
+    ret += '{my_name}: {{}}, '.format(my_name=pymtl_name(port._dsl.my_name))
 
   ret += "'.format("
 
   for port in ports:
-    ret += '{}, '.format( port._dsl.full_name )
+    ret += '{}, '.format(pymtl_name(port._dsl.full_name))
 
   ret += ")"
 
@@ -346,12 +404,12 @@ def generate_internal_line_trace_py( ports ):
   ret = "'"
 
   for port in ports:
-    ret += '{my_name}: {{}}, '.format( my_name = port._dsl.my_name )
+    ret += '{my_name}: {{}}, '.format(my_name=pymtl_name(port._dsl.my_name))
 
   ret += "\\n'.format("
 
   for port in ports:
-    ret += '{}, '.format( 's._ffi_m.'+port._dsl.my_name+'[0]' )
+    ret += '{}, '.format( 's._ffi_m.'+pymtl_name(port._dsl.my_name)+'[0]' )
 
   ret += ")"
 

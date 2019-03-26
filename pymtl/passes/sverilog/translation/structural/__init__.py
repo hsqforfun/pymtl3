@@ -1,2 +1,2 @@
 
-from SVStructuralTranslatorL1 import SVStructuralTranslatorL1 as SVStructuralTranslator
+from SVStructuralTranslatorL1 import SVStructuralTranslatorL1
