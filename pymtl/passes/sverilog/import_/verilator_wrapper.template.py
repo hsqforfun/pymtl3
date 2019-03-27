@@ -91,7 +91,7 @@ class {top_name}( RTLComponent ):
     {constraints}
 
   def line_trace( s ):
-    return {line_trace}
+{line_trace}
 
   def internal_line_trace( s ):
-    return {in_line_trace}
+{in_line_trace}

@@ -517,7 +517,8 @@ class TestComponent( RTLComponent ):
 
 @given( component_str=S1_B0_ComponentStrategy() )
 @settings( deadline = None, suppress_health_check = HealthCheck.all(),
-  verbosity=Verbosity.verbose, print_blob=PrintSettings.ALWAYS
+  verbosity=Verbosity.verbose, print_blob=PrintSettings.ALWAYS,
+  max_examples=10
 )
 def test_s1_b0_hypothesis( do_test, component_str ):
 

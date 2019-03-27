@@ -380,19 +380,20 @@ def generate_readout_upblks_py( ports, ssg ):
 
 def generate_line_trace_py( ports ):
 
-  ret = "'"
+  ret = [ 'lt = ""' ]
 
   for port in ports:
-    ret += '{my_name}: {{}}, '.format(my_name=pymtl_name(port._dsl.my_name))
+    my_name = pymtl_name( port._dsl.my_name )
+    full_name = pymtl_name( port._dsl.full_name )
+    ret.append(
+      'lt += "{my_name} = {{}}, ".format({full_name})'.format(**locals())
+    )
 
-  ret += "'.format("
+  ret.append( 'return lt' )
 
-  for port in ports:
-    ret += '{}, '.format(pymtl_name(port._dsl.full_name))
+  make_indent( ret, 2 )
 
-  ret += ")"
-
-  return ret
+  return '\n'.join( ret )
 
 #-------------------------------------------------------------------------
 # generate_internal_line_trace_py
@@ -401,19 +402,20 @@ def generate_line_trace_py( ports ):
 
 def generate_internal_line_trace_py( ports ):
 
-  ret = "'"
+  ret = [ 'lt = ""' ]
 
   for port in ports:
-    ret += '{my_name}: {{}}, '.format(my_name=pymtl_name(port._dsl.my_name))
+    my_name = pymtl_name( port._dsl.my_name )
+    ret.append(
+      'lt += "{my_name} = {{}}, ".format(s._ffi_m.{my_name}[0])'.\
+        format(**locals())
+    )
 
-  ret += "\\n'.format("
+  ret.append( 'return lt' )
 
-  for port in ports:
-    ret += '{}, '.format( 's._ffi_m.'+pymtl_name(port._dsl.my_name)+'[0]' )
+  make_indent( ret, 2 )
 
-  ret += ")"
-
-  return ret
+  return '\n'.join( ret )
 
 #-------------------------------------------------------------------------
 # get_indices
