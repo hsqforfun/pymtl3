@@ -350,7 +350,7 @@ class StructuralTranslatorL1( BaseRTLIRTranslator ):
 
     # Generate the connections assuming no sub-components
 
-    nets = m.get_all_nets()
+    nets = m.get_all_value_nets()
     adjs = m.get_signal_adjacency_dict()
 
     for writer, net in nets:
