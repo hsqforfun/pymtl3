@@ -7,35 +7,31 @@
 # Author : Peitian Pan
 # Date   : March 18, 2019
 
-from pymtl import *
 from pymtl.passes.utility import make_indent
-from pymtl.passes.rtlir.translation.behavioral\
-    import BehavioralRTLIRNodeVisitor, BehavioralTranslatorL1
-from pymtl.passes.rtlir.translation.behavioral.BehavioralRTLIR import *
+from pymtl.passes.rtlir.translation.behavioral.BehavioralTranslatorL1\
+    import BehavioralTranslatorL1
+from pymtl.passes.rtlir.RTLIRType import *
+from pymtl.passes.rtlir.behavioral.BehavioralRTLIR import *
 
-from SVBehavioralTranslatorL0 import SVBehavioralTranslatorL0
+class SVBehavioralTranslatorL1( BehavioralTranslatorL1 ):
 
-class SVBehavioralTranslatorL1( SVBehavioralTranslatorL0, BehavioralTranslatorL1 ):
-
-  @staticmethod
-  def rtlir_tr_upblk_decls( upblk_srcs ):
+  def rtlir_tr_upblk_decls( s, upblk_srcs ):
     ret = ''
     for upblk_src in upblk_srcs:
       make_indent( upblk_src, 1 )
       ret += '\n' + '\n'.join( upblk_src )
     return ret
 
-  @staticmethod
-  def rtlir_tr_upblk_decl( m, upblk, rtlir_upblk ):
-    visitor = BehavioralRTLIRToSVVisitor( m )
+  def rtlir_tr_upblk_decl( s, m, upblk, rtlir_upblk ):
+    visitor = BehavioralRTLIRToSVVisitorL1( m )
     return visitor.enter( upblk, rtlir_upblk )
 
 #-------------------------------------------------------------------------
-# BehavioralRTLIRToSVVisitor
+# BehavioralRTLIRToSVVisitorL1
 #-------------------------------------------------------------------------
 # Visitor that translates RTLIR to SystemVerilog for a single upblk.
 
-class BehavioralRTLIRToSVVisitor( BehavioralRTLIRNodeVisitor ):
+class BehavioralRTLIRToSVVisitorL1( BehavioralRTLIRNodeVisitor ):
 
   def __init__( s, component ):
     s.component = component
@@ -80,9 +76,7 @@ class BehavioralRTLIRToSVVisitor( BehavioralRTLIRNodeVisitor ):
     s.upblk_type = s.COMBINATIONAL
 
     # Add name of the upblk to this always block
-    src.extend( [ 'always_comb begin : {blk_name}'.format(
-      blk_name = blk_name
-    ) ] )
+    src.extend( [ 'always_comb begin : {blk_name}'.format( **locals() ) ] )
     
     for stmt in node.body:
       body.extend( s.visit( stmt ) )
@@ -110,9 +104,9 @@ class BehavioralRTLIRToSVVisitor( BehavioralRTLIRNodeVisitor ):
     s.upblk_type = s.SEQUENTIAL
 
     # Add name of the upblk to this always block
-    src.extend( [ 'always_ff @(posedge clk) begin : {blk_name}'.format(
-      blk_name = blk_name
-    ) ] )
+    src.extend( [
+      'always_ff @(posedge clk) begin : {blk_name}'.format( **locals() )
+    ] )
     
     for stmt in node.body:
       body.extend( s.visit( stmt ) )
@@ -140,9 +134,7 @@ class BehavioralRTLIRToSVVisitor( BehavioralRTLIRNodeVisitor ):
     value         = s.visit( node.value )
     assignment_op = '<=' if s.upblk_type == s.SEQUENTIAL else '='
 
-    ret = '{target} {op} {value};'.format(
-      target = target, op = assignment_op, value = value 
-    )
+    ret = '{target} {assignment_op} {value};'.format( **locals() )
 
     return [ ret ]
 
@@ -181,14 +173,17 @@ class BehavioralRTLIRToSVVisitor( BehavioralRTLIRNodeVisitor ):
     return str( node.value )
 
   #-----------------------------------------------------------------------
-  # visit_Bitwidth
+  # visit_BitsCast
   #-----------------------------------------------------------------------
 
-  def visit_Bitwidth( s, node ):
-    if isinstance( node.value, Number ):
-      return "{}'d{}".format( node.nbits, node.value.value )
-    else:
-      return s.visit( node.value )
+  def visit_BitsCast( s, node ):
+    # if isinstance( node.value, Number ):
+    assert isinstance( node.value, Number )
+    value = node.value.value
+    bit_width = node.nbits
+    return "{bit_width}'d{value}".format( **locals() )
+    # else:
+      # return s.visit( node.value )
 
   #-----------------------------------------------------------------------
   # visit_IfExp
@@ -234,9 +229,10 @@ class BehavioralRTLIRToSVVisitor( BehavioralRTLIRNodeVisitor ):
     attr  = node.attr
     value = s.visit( node.value )
 
-    if isinstance( node.value, Base ) and (node.value.base is s.component):
+    if isinstance( node.value, Base ):
       # The base of this attribute node is the component 's'.
       # Example: s.out, s.STATE_IDLE
+      assert node.value.base is s.component
       ret = attr
 
     else:
@@ -247,23 +243,33 @@ class BehavioralRTLIRToSVVisitor( BehavioralRTLIRNodeVisitor ):
   #-----------------------------------------------------------------------
   # visit_Index
   #-----------------------------------------------------------------------
+  # At L1 all indexes are bit selections
 
   def visit_Index( s, node ):
     idx   = s.visit( node.idx )
     value = s.visit( node.value )
 
-    return '{value}[{idx}]'.format( value = value, idx = idx )
+    return '{value}[{idx}]'.format( **locals() )
 
   #-----------------------------------------------------------------------
   # visit_Slice
   #-----------------------------------------------------------------------
+  # Part selection
 
   def visit_Slice( s, node ):
+
     lower = s.visit( node.lower )
-    upper = s.visit( node.upper )
     value = s.visit( node.value )
 
-    return '{val}[{y}-1:{x}]'.format( val = value, x = lower, y = upper )
+    if hasattr( node.upper, '_value' ):
+
+      upper = str( int( node.upper._value - pymtl.Bits32(1) ) )
+
+    else:
+      
+      upper = s.visit( node.upper ) + '-1'
+
+    return '{value}[{upper}:{lower}]'.format( **locals() )
 
   #-----------------------------------------------------------------------
   # visit_Base

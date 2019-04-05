@@ -1,2 +1,3 @@
 
-from StructuralTranslatorL1 import StructuralTranslatorL1
+from StructuralTranslatorL3\
+    import StructuralTranslatorL3 as StructuralTranslator

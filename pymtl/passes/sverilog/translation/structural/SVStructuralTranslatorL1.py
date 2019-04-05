@@ -3,119 +3,84 @@
 #=========================================================================
 
 from pymtl.passes.utility import make_indent
-from pymtl.passes.rtlir.translation.structural import StructuralTranslatorL1
+from pymtl.passes.rtlir.translation.structural.StructuralTranslatorL1\
+    import StructuralTranslatorL1
 
 class SVStructuralTranslatorL1( StructuralTranslatorL1 ):
 
-  # Data type strings
+  # Data types
 
-  @staticmethod
-  def rtlir_tr_const_int_type():
-    return 'localparam {name} = {value}'
-
-  @staticmethod
-  def rtlir_tr_const_int_fw_type( nbits ):
-    return 'localparam {name} = {value}'
-
-  @staticmethod
-  def rtlir_tr_bit_type( nbits ):
+  def rtlir_tr_vector_dtype( s, Type ):
+    msb = Type.get_length() -1
     return {
-      'dtype'    : 'logic',
-      'vec_size' : '[{}:0]'.format( nbits-1 )
+      'def'  : '',
+      'decl' : 'logic [{msb}:0] {{name}}'.format( **locals() )
     }
 
-  # Signal declaration strings
+  def rtlir_tr_array_dtype( s, Type, subtype ):
+    item_dtype = subtype['decl']
+    array_dim = reduce(
+      lambda x,y: x+'[0:{}]'.format(y-1), Type.get_dim_sizes(), ''
+    )
+    return {
+      'def'  : '',
+      'decl' : item_dtype + ' ' + array_dim
+    }
 
-  @staticmethod
-  def rtlir_tr_bit_slice( base_signal, start, stop, step ):
-    if stop == start+1:
-      return '{base_signal}[{start}]'.format( **locals() )
-      # Treat bit indexing as slicing because this allows multiple
-      # indexing and slicing on top of existing operations.
-      # Update: this does not work in verilator...
-      # _stop = stop-1
-      # return '{base_signal}[{_stop}:{start}]'.format( **locals() )
-    else:
-      assert (step is None) or (step == 1)
-      _stop = stop-1
-      return '{base_signal}[{_stop}:{start}]'.format( **locals() )
-
-  @staticmethod
-  def rtlir_tr_port_decls( port_decls ):
+  # Declarations
+  
+  def rtlir_tr_port_decls( s, port_decls ):
     make_indent( port_decls, 1 )
     return ',\n'.join( port_decls )
-
-  @staticmethod
-  def rtlir_tr_port_decl( direction, name, Type ):
-    return '{} {} {} {}'.format(
-      direction, Type['dtype'], Type['vec_size'], name
-    )
-
-  @staticmethod
-  def rtlir_tr_wire_decls( wire_decls ):
+  
+  def rtlir_tr_port_decl( s, name, Type, dtype ):
+    return Type.get_direction() + ' ' + dtype['decl'].format( **locals() )
+  
+  def rtlir_tr_wire_decls( s, wire_decls ):
     make_indent( wire_decls, 1 )
     return '\n'.join( wire_decls )
-
-  @staticmethod
-  def rtlir_tr_wire_decl( name, Type ):
-    return '{} {} {}'.format(
-      Type['dtype'], Type['vec_Size'], name
-    )
-
-  @staticmethod
-  def rtlir_tr_const_decls( const_decls ):
+  
+  def rtlir_tr_wire_decl( s, name, Type, dtype ):
+    return dtype['decl'].format( **locals() ) + ';'
+  
+  def rtlir_tr_const_decls( s, const_decls ):
     make_indent( const_decls, 1 )
-    return ',\n'.join( const_decls )
+    return '\n'.join( const_decls )
+  
+  def rtlir_tr_const_decl( s, name, Type, dtype, value ):
 
-  @staticmethod
-  def rtlir_tr_const_decl( name, Type, value ):
-    return Type.format( **locals() )
+    assert isinstance( dtype, Vector ),\
+      '{} is not a vector constant!'.format( value )
 
-  # Connection strings
+    value = int( value )
 
-  @staticmethod
-  def rtlir_tr_connections( connections ):
+    return 'localparam {name} = {value};'.format( **locals() )
+
+  # Connections
+  
+  def rtlir_tr_connections( s, connections ):
     make_indent( connections, 1 )
     return '\n'.join( connections )
+  
+  def rtlir_tr_connection( s, wr_signal, rd_signal ):
+    return 'assign {rd_signal} = {wr_signal};'.format( **locals() )
 
-  @staticmethod
-  def rtlir_tr_connection( wr_signal, rd_signal ):
-    return 'assign {} = {};'.format( rd_signal, wr_signal )
+  # Signal operations
+  
+  def rtlir_tr_bit_selection( s, base_signal, index ):
+    # Bit selection
+    return '{base_signal}[{index}]'.format( **locals() )
 
-  @staticmethod
-  def rtlir_tr_component( component_nspace ):
-    template =\
-"""
-module {module_name}
-# (
-{const_decls}
-)
-(
-{port_decls}
-);
+  def rtlir_tr_part_selection( s, base_signal, start, stop, step ):
+    # Part selection
+    assert (step is None) or (step == 1)
+    _stop = stop-1
+    return '{base_signal}[{_stop}:{start}]'.format( **locals() )
 
-{wire_decls}
+  # Miscs
 
-{upblk_srcs}
-
-{connections}
-
-endmodule
-"""
-
-    module_name = getattr( component_nspace, 'component_name', '' )
-    const_decls = getattr( component_nspace, 'const_decls', '' )
-    port_decls = getattr( component_nspace, 'port_decls', '' )
-    wire_decls = getattr( component_nspace, 'wire_decls', '' )
-    upblk_srcs = getattr( component_nspace, 'upblk_srcs', '' )
-    connections = getattr( component_nspace, 'connections', '' )
-
-    return template.format( **locals() )
-
-  @staticmethod
-  def rtlir_tr_component_name( component_name ):
-    return component_name
-
-  @staticmethod
-  def rtlir_tr_var_name( signal_name ):
+  def rtlir_tr_var_name( s, signal_name ):
     return signal_name.replace( '[', '_' ).replace( ']', '_' )
+
+  def rtlir_tr_literal_number( s, value, nbits ):
+    return "{nbits}'d{value}".format( **locals() )

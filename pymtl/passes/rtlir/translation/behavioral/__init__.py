@@ -1,8 +1,3 @@
 
-from BehavioralRTLIR import BehavioralRTLIRNodeVisitor
-from BehavioralTranslatorL0 import BehavioralTranslatorL0
-from BehavioralTranslatorL1 import BehavioralTranslatorL1
-from BehavioralTranslatorL2 import BehavioralTranslatorL2
-
-from BehavioralRTLIRGenL1Pass import BehavioralRTLIRGenL1Pass\
-    as BehavioralRTLIRGenPass
+from BehavioralTranslatorL5\
+    import BehavioralTranslatorL5 as BehavioralTranslator

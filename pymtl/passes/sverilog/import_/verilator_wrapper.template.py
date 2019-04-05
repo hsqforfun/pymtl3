@@ -10,6 +10,10 @@ from cffi  import FFI
 
 from pymtl import *
 
+def get_bit_slice( num, start, stop ):
+
+  return (num >> start) & (2**(stop-start)-1)
+
 #-------------------------------------------------------------------------
 # {top_name}
 #-------------------------------------------------------------------------

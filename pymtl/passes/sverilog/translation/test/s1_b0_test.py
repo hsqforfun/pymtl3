@@ -3,7 +3,7 @@
 #=========================================================================
 # Tests with value ports and connections, no upblks.
 
-import pytest, linecache
+import pytest, copy
 
 from pymtl import *
 from pymtl.passes.utility.test_utility import *
@@ -15,33 +15,49 @@ from ....                import SimpleImportPass
 
 def local_do_test( m ):
 
-  for key, value in m.input_data.iteritems():
+  m_copy = copy.deepcopy( m )
+
+  # Convert the input data into correct type
+
+  for key, value in m._input_data.iteritems():
     Type = value[1]
 
     for idx, data in enumerate( value[0] ):
       value[0][idx] = Type( data )
 
-  output_val = gen_sim_reference( m, m.input_data, m.outport_types )
+  # Generate reference output
+
+  output_val = gen_sim_reference( m, m._input_data, m._outport_types )
+
+  # Generate translation pass with the given structural & behavioral levels
 
   translation_pass = gen_translation_pass(
     mk_TranslationPass, mk_SVRTLIRTranslator, 1, 0
   )
 
+  # Mangle the names of ports because the import pass might have done the
+  # same
+
   _input_data, _outport_types, _output_val = {}, {}, {}
-  for name, value in m.input_data.iteritems():
+  for name, value in m._input_data.iteritems():
     _input_data[ pymtl_name( name ) ] = value
-  for name, value in m.outport_types.iteritems():
+  for name, value in m._outport_types.iteritems():
     _outport_types[ pymtl_name( name ) ] = value
   for name, value in output_val.iteritems():
     _output_val[ pymtl_name( name ) ] = value
 
+  # Verfiy the imported model against the reference output
+
   run_sim_reference_test(
-    m._unelaborated, _input_data, _outport_types, _output_val,
+    m_copy, _input_data, _outport_types, _output_val,
     translation_pass, SimpleImportPass
   )
 
-  m._unelaborated._pass_simple_import.imported_model.finalize()
-  del m._unelaborated
+  # Calling `finalize()` is necessary to immediately destroy the cached
+  # dynamic library in CFFI
+
+  m_copy._pass_simple_import.imported_model.finalize()
+  del m_copy
   del m
 
 def test_port_connection1( do_test ):
@@ -80,9 +96,8 @@ def test_port_connection1( do_test ):
       s.connect( s.in_3, s.out3[0:1] )
 
   m = TestComponent()
-  m._unelaborated = TestComponent()
 
-  m.input_data = {'in_0': ([1], Bits1), 'in_1': ([1], Bits2),
+  m._input_data = {'in_0': ([1], Bits1), 'in_1': ([1], Bits2),
       'in_2[0][0][0]' : ([0], Bits1),
       'in_2[0][0][1]' : ([0], Bits1),
       'in_2[1][0][0]' : ([0], Bits1),
@@ -91,7 +106,7 @@ def test_port_connection1( do_test ):
       'in_4' : ( [1], Bits1 )
   }
 
-  m.outport_types = {'out0': Bits2, 
+  m._outport_types = {'out0': Bits2, 
       'out1[0][0]' : Bits2,
       'out1[0][1]' : Bits2,
       'out1[1][0]' : Bits2,
@@ -113,11 +128,10 @@ def test_port_connection2( do_test ):
       s.connect( s.out, s.in_ )
 
   m = TestComponent()
-  m._unelaborated = TestComponent()
 
-  m.input_data = { 'in_': ([1, 0], Bits16) }
+  m._input_data = { 'in_': ([1, 0], Bits16) }
 
-  m.outport_types = {'out': Bits16}
+  m._outport_types = {'out': Bits16}
 
   do_test( m )
 
@@ -136,11 +150,10 @@ def test_port_connection3( do_test ):
       s.connect( s.in_0, s.out0[0:1] )
 
   m = TestComponent()
-  m._unelaborated = TestComponent()
 
-  m.input_data = {'in_0': ([1, 0], Bits1), 'in_1': ([1, 1], Bits1)}
+  m._input_data = {'in_0': ([1, 0], Bits1), 'in_1': ([1, 1], Bits1)}
 
-  m.outport_types = {'out0': Bits1}
+  m._outport_types = {'out0': Bits1}
 
   do_test( m )
 
@@ -176,9 +189,8 @@ def test_port_connection4( do_test ):
       s.connect( s.in_2[0][0:1], s.out3[1:2] )
 
   m = TestComponent()
-  m._unelaborated = TestComponent()
 
-  m.input_data = {'in_0': ([1, 0], Bits2),
+  m._input_data = {'in_0': ([1, 0], Bits2),
     'in_1': ([1, 1], Bits2),
     'in_2[0]': ([1, 1], Bits2),
     'in_2[1]': ([1, 1], Bits2),
@@ -186,7 +198,7 @@ def test_port_connection4( do_test ):
     'in_3[1]': ([1, 1], Bits2),
     'in_4': ([1, 1], Bits2)}
 
-  m.outport_types = {'out0': Bits1,
+  m._outport_types = {'out0': Bits1,
     'out1': Bits2,
     'out2[0][0]': Bits2,
     'out2[0][1]': Bits2,
@@ -218,11 +230,10 @@ def test_port_connection5( do_test ):
       s.connect( s.in_1[0:1], s.out1[0:1] )
 
   m = TestComponent()
-  m._unelaborated = TestComponent()
 
-  m.input_data = {'in_0': ([0, 1], Bits1), 'in_1':([1,0], Bits2)}
+  m._input_data = {'in_0': ([0, 1], Bits1), 'in_1':([1,0], Bits2)}
 
-  m.outport_types = {'out1': Bits1,
+  m._outport_types = {'out1': Bits1,
       'out0[0][0][0]': Bits1,
       'out0[0][0][1]': Bits1,
       'out0[1][0][0]': Bits1,
@@ -253,11 +264,10 @@ def test_port_connection6( do_test ):
       s.connect( s.in_1[0:1], s.out1[0:1] )
 
   m = TestComponent()
-  m._unelaborated = TestComponent()
 
-  m.input_data = {'in_0': ([0, 1], Bits1), 'in_1':([1,0], Bits2)}
+  m._input_data = {'in_0': ([0, 1], Bits1), 'in_1':([1,0], Bits2)}
 
-  m.outport_types = {'out1': Bits1,
+  m._outport_types = {'out1': Bits1,
       'out0[0][0][0]': Bits1,
       'out0[0][0][1]': Bits1,
       'out0[1][0][0]': Bits1,
@@ -351,9 +361,8 @@ def test_port_connection7( do_test ):
       s.connect( s.in_0[0:79], s.out2[0][0][2][5][7:86] )
 
   m = TestComponent()
-  m._unelaborated = TestComponent()
 
-  m.input_data = {
+  m._input_data = {
       'in_0': ([21914882267441428730234304116L], Bits95),
       'in_1':([67876138429], Bits36),
       'in_2[0]': ([3841], Bits14),
@@ -369,7 +378,7 @@ def test_port_connection7( do_test ):
       'in_4': ([118305075065904913999730L], Bits79)
   }
 
-  m.outport_types = {
+  m._outport_types = {
       'out0': Bits48,
       'out1[0]': Bits109,
       'out1[1]': Bits109,

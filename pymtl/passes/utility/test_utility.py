@@ -14,6 +14,11 @@ from pymtl.passes.PassGroups import SimpleSim, SimpleSimDumpDAG
 from pclib.rtl.TestSource    import TestBasicSource as TestSource
 from pclib.rtl.TestSink      import TestBasicSink   as TestSink
 
+from pymtl.passes.rtlir.behavioral import MinBehavioralRTLIRLevel,\
+                                          MaxBehavioralRTLIRLevel
+from pymtl.passes.rtlir.structural import MinStructuralRTLIRLevel,\
+                                          MaxStructuralRTLIRLevel
+
 from contextlib              import contextmanager
 
 #-------------------------------------------------------------------------
@@ -29,7 +34,7 @@ def do_test( request ):
 #-------------------------------------------------------------------------
 # expected_failure
 #-------------------------------------------------------------------------
-# This function is used to run a test case which is expected to fail and
+# This context is used to run a test case which is expected to fail and
 # throwing a specific exception is the correct behavior.
 # Not to be confused with pytest.xfail, which is commonly used to mark
 # tests related to unimplemented functionality.
@@ -46,7 +51,7 @@ def expected_failure( exception = Exception ):
   except:
     raise
 
-  raise Exception( func.__name__ + ' test unexpectedly passed!' )
+  raise Exception( 'expected-to-fail test unexpectedly passed!' )
 
 #-------------------------------------------------------------------------
 # gen_rtlir_translator
@@ -60,22 +65,19 @@ def gen_rtlir_translator( structural_level, behavioral_level ):
 
   if label in _rtlir_translators: return _rtlir_translators[ label ]
 
-  assert 1 <= structural_level <= 1
-  assert 0 <= behavioral_level <= 2
+  assert MinStructuralRTLIRLevel <= structural_level <= MaxStructuralRTLIRLevel
+  assert MinBehavioralRTLIRLevel <= behavioral_level <= MaxBehavioralRTLIRLevel
 
-  if structural_level == 1:
-    from pymtl.passes.rtlir.translation.structural\
-      import StructuralTranslatorL1 as _StructuralTranslator
+  structural_tplt =\
+    'from pymtl.passes.rtlir.translation.structural.StructuralTranslatorL{0}\
+       import StructuralTranslatorL{0} as _StructuralTranslator'
 
-  if behavioral_level == 0:
-    from pymtl.passes.rtlir.translation.behavioral\
-      import BehavioralTranslatorL0 as _BehavioralTranslator
-  elif behavioral_level == 1:
-    from pymtl.passes.rtlir.translation.behavioral\
-      import BehavioralTranslatorL1 as _BehavioralTranslator
-  elif behavioral_level == 2:
-    from pymtl.passes.rtlir.translation.behavioral\
-      import BehavioralTranslatorL2 as _BehavioralTranslator
+  behavioral_tplt =\
+    'from pymtl.passes.rtlir.translation.behavioral.BehavioralTranslatorL{0}\
+       import BehavioralTranslatorL{0} as _BehavioralTranslator'
+
+  exec structural_tplt.format( structural_level ) in globals(), locals()
+  exec behavioral_tplt.format( behavioral_level ) in globals(), locals()
   
   from pymtl.passes.rtlir.translation.RTLIRTranslator import mk_RTLIRTranslator
 
@@ -144,10 +146,12 @@ def gen_test_harness(
   return TestHarness(dut, inport_types, outport_types, input_val, output_val)
 
 #-------------------------------------------------------------------------
-# run_translation_test
+# run_translation_reference_test
 #-------------------------------------------------------------------------
 
-def run_translation_test( model, test_vec, TranslationPass, ImportPass ):
+def run_translation_reference_test(
+    model, test_vec, TranslationPass, ImportPass
+  ):
 
   #-----------------------------------------------------------------------
   # Parse the test vector header
@@ -207,7 +211,7 @@ def run_translation_test( model, test_vec, TranslationPass, ImportPass ):
 
   model.elaborate()
   model.apply( TranslationPass() )
-  model.apply( ImportPass() )
+  godel.apply( ImportPass() )
 
   dut = model._pass_simple_import.imported_model
 
@@ -222,9 +226,8 @@ def run_translation_test( model, test_vec, TranslationPass, ImportPass ):
   # for outport in dut.get_output_value_ports():
     # outport_types[ outport._dsl.my_name ] = outport._dsl.Type
 
-  # However there is no easy way to `re-elaborate` the DUT from a
-  # new top component... The current workaround is to import the DUT
-  # twice.
+  # However there is no easy way to `re-elaborate` the DUT w.r.t. a
+  # new top component...
 
   # dut = None
   # model._pass_simple_import.imported_model = None

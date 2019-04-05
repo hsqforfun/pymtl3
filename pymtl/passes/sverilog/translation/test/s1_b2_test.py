@@ -1,7 +1,8 @@
 #=========================================================================
-# s1_b1_test.py
+# s1_b2_test.py
 #=========================================================================
 # Pure behavioral tests with value ports and no connections
+# Behavioral L2: if, for, temporary variables, bool, comparison
 
 import pytest
 
@@ -32,7 +33,7 @@ def local_do_test( m ):
   # Generate translation pass with the given structural & behavioral levels
 
   translation_pass = gen_translation_pass(
-    mk_TranslationPass, mk_SVRTLIRTranslator, 1, 1
+    mk_TranslationPass, mk_SVRTLIRTranslator, 1, 2
   )
 
   # Mangle the names of ports because the import pass might have done the
@@ -60,62 +61,65 @@ def local_do_test( m ):
   del m_copy
   del m
 
-def test_upblk_assign1( do_test ):
+def test_upblk_if1( do_test ):
 
   class TestComponent( RTLComponent  ):
 
     def construct( s ):
 
-      s.in_0 = InVPort( Bits1 )
-      s.in_1 = InVPort( Bits2 )
       s.in_2 = [ [ [ InVPort( Bits1 ) for _ in xrange(2) ] for _ in xrange(1) ] for _ in xrange(2) ]
-      s.in_3 = InVPort( Bits1 )
-      s.in_4 = InVPort( Bits1 )
-      s.out0 = OutVPort( Bits2 )
       s.out1 = [ [ OutVPort( Bits2 ) for _ in xrange(2) ] for _ in xrange(3) ]
-      s.out2 = OutVPort( Bits1 )
-      s.out3 = OutVPort( Bits1 )
 
       # Output bitwidth = 16
 
       @s.update
-      def connection():
-        s.out0[0:1] = s.in_0
-        s.out0[1:2] = s.in_0
-        s.out1[0][0][0:1] = s.in_0
-        s.out1[0][1][1:2] = s.in_0
-        s.out1[0][1][0:1] = s.in_1[1:2]
-        s.out1[0][1][1:2] = s.in_1[0:1]
-        s.out1[1][0][0:1] = s.in_1[1:2]
-        s.out1[1][0][1:2] = s.in_1[0:1]
-        s.out1[1][1][0:1] = s.in_1[1:2]
-        s.out1[1][1][1:2] = s.in_1[0:1]
-        s.out1[2][0][0:1] = s.in_1[1:2]
-        s.out1[2][0][1:2] = s.in_2[0][0][0][0]
-        s.out1[2][1][0:1] = s.in_2[0][0][0]
-        s.out1[2][1][1:2] = s.in_2[0][0][0]
-        s.out2[0:1] = s.in_2[0][0][0]
-        s.out3[0:1] = s.in_3
+      def if1():
+        if s.in_2[0][0][0]:
+          s.out1[0][0] = Bits2( 1 )
+        else:
+          s.out1[0][0] = 0
+
+        if s.in_2[0][0][1] == s.in_2[1][0][1]:
+          s.out1[0][1] = s.in_2[1][0][1] & s.in_2[0][0][1]
+          s.out1[1][0] = s.in_2[0][0][1] | s.in_2[1][0][1]
+        else:
+          s.out1[0][1] = 0
+          s.out1[1][0] = 0
+
+        if s.in_2[1][0][1] <= s.in_2[0][0][0]:
+
+          if s.in_2[1][0][1] & s.in_2[1][0][0]:
+            s.out1[1][1] = Bits1(1)
+            s.out1[2][0] = 1
+          else:
+            s.out1[1][1] = Bits1(0)
+            if Bits1(1) + 0:
+              s.out1[2][0] = 1
+            else:
+              s.out1[2][0] = 0
+
+          s.out1[1][1] = 10
+        else:
+          s.out1[1][1] = Bits1(0)
+          s.out1[2][0] = Bits1(0)
+          s.out1[2][1] = 1
 
   m = TestComponent()
 
-  m._input_data = {'in_0': ([1], Bits1), 'in_1': ([1], Bits2),
+  m._input_data = {
       'in_2[0][0][0]' : ([0], Bits1),
       'in_2[0][0][1]' : ([0], Bits1),
       'in_2[1][0][0]' : ([0], Bits1),
       'in_2[1][0][1]' : ([0], Bits1),
-      'in_3' : ( [1], Bits1 ),
-      'in_4' : ( [1], Bits1 )
   }
 
-  m._outport_types = {'out0': Bits2, 
+  m._outport_types = {
       'out1[0][0]' : Bits2,
       'out1[0][1]' : Bits2,
       'out1[1][0]' : Bits2,
       'out1[1][1]' : Bits2,
       'out1[2][0]' : Bits2,
       'out1[2][1]' : Bits2,
-      'out2' : Bits1, 'out3' : Bits1
   }
 
   do_test( m )
@@ -131,17 +135,12 @@ def test_upblk_assign2( do_test ):
       s.in_0 = InVPort( Bits1 )
       s.out0 = OutVPort( Bits2 )
 
-      s.ww = Wire( Bits1 )
-
-      s.connect( s.ww, 1 )
-
       # Output bitwidth = 16
 
       @s.update
       def connection():
         s.out0[0:1] = Type( 1 )
-        # s.out0[1:2] = Bits1( 0 )
-        s.out0[1:2] = s.ww
+        s.out0[1:2] = Bits1( 0 )
 
   m = TestComponent()
 

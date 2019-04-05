@@ -1,4 +1,2 @@
 
-from translation.behavioral.BehavioralRTLIRTypeL1 import BaseBehavioralRTLIRType
-
-get_type = BaseBehavioralRTLIRType.get_type
+from RTLIRType import get_rtlir_type

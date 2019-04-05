@@ -90,7 +90,7 @@ def generate_py_wrapper( interface, ports, top_name, lib_file, port_cdefs, ssg_n
         py_wrapper = py_wrapper.format(
           top_name       = top_name,
           lib_file       = lib_file,
-          port_externs   = '\n'.join( port_cdefs ),
+          port_externs   = ('  '*4+'\n').join( port_cdefs ),
           port_defs      = '\n'.join( port_defs ),
           seq_upblk      = seq_upblk,
           comb_upblks    = '\n'.join( comb_upblks ),

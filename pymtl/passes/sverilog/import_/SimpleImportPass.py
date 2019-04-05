@@ -17,6 +17,7 @@ from pymtl.passes.utility import collect_objs
 from errors import *
 from ExternalSimSetup import setup_external_sim
 from PyMTLWrapperGen  import generate_py_wrapper
+from helpers import get_struct_objects
 
 class SimpleImportPass( BasePass ):
 
@@ -37,7 +38,7 @@ class SimpleImportPass( BasePass ):
     # Assume the input verilog file and the top module has the same name 
     # as the class name of model
     
-    module_name = model._translator.component[model].component_name
+    module_name = model._translator._top_module_name
     sv_name  = module_name
     ssg_name = module_name + '.ssg'
     top_name = module_name
@@ -45,8 +46,8 @@ class SimpleImportPass( BasePass ):
     # Generate the interface structure
 
     interface =\
-      collect_objs( model, InVPort ) +\
-      collect_objs( model, OutVPort )
+      collect_objs( model, InVPort, True ) +\
+      collect_objs( model, OutVPort, True )
 
     ports = sorted(
       model.get_input_value_ports() | model.get_output_value_ports(),
@@ -92,3 +93,10 @@ class SimpleImportPass( BasePass ):
       exec( import_cmd )
 
     model._pass_simple_import.imported_model = ImportedModel()
+    
+    # Update the global namespace of `construct` so that the struct
+    # classes defined previously can still be used in the imported model
+
+    model._pass_simple_import.\
+      imported_model.construct.__globals__.update(
+        get_struct_objects(interface) )

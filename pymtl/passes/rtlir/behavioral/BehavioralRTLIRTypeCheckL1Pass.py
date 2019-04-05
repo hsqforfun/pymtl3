@@ -6,20 +6,17 @@
 # exception when a type error is detected.
 #
 # Author : Peitian Pan
-# Date   : Jan 6, 2019
+# Date   : March 20, 2019
 
-from pymtl                import *
+import pymtl
+
 from pymtl.passes         import BasePass, PassMetadata
-from pymtl.passes.utility import freeze
-from pymtl.passes.rtlir.translation.behavioral.BehavioralRTLIR import *
-from pymtl.passes.rtlir.translation.behavioral.BehavioralRTLIRTypeL1 import *
+from pymtl.passes.rtlir.RTLIRType import *
 
-from errors             import PyMTLTypeError
+from BehavioralRTLIR import *
+from errors import PyMTLTypeError
 
 class BehavioralRTLIRTypeCheckL1Pass( BasePass ):
-
-  def __init__( s, type_env ):
-    s.type_env = type_env
 
   def __call__( s, m ):
     """perform type checking on all RTLIR in rtlir_upblks"""
@@ -27,7 +24,11 @@ class BehavioralRTLIRTypeCheckL1Pass( BasePass ):
     if not hasattr( m, '_pass_behavioral_rtlir_type_check' ):
       m._pass_behavioral_rtlir_type_check = PassMetadata()
 
-    visitor = BehavioralRTLIRTypeCheckVisitorL1( m, s.type_env )
+    m._pass_behavioral_rtlir_type_check.rtlir_freevars = {}
+
+    visitor = BehavioralRTLIRTypeCheckVisitorL1( m,
+      m._pass_behavioral_rtlir_type_check.rtlir_freevars
+    )
 
     for blk in m.get_update_blocks():
       visitor.enter( blk, m._pass_behavioral_rtlir_gen.rtlir_upblks[ blk ] )
@@ -39,10 +40,11 @@ class BehavioralRTLIRTypeCheckL1Pass( BasePass ):
 
 class BehavioralRTLIRTypeCheckVisitorL1( BehavioralRTLIRNodeVisitor ):
 
-  def __init__( s, component, type_env ):
+  def __init__( s, component, freevars ):
+
     s.component = component
 
-    s.type_env = type_env
+    s.freevars = freevars
 
     #---------------------------------------------------------------------
     # The expected evaluation result types for each type of RTLIR node
@@ -50,24 +52,26 @@ class BehavioralRTLIRTypeCheckVisitorL1( BehavioralRTLIRNodeVisitor ):
 
     s.type_expect = {}
 
-    lhs_types = ( Signal, Array )
+    lhs_types = ( Port, Wire )
 
     s.type_expect[ 'Assign' ] = {
-      'target' : ( lhs_types, 'lhs of assignment must be signal/array!' ),
-      'value' : ( (Const,Signal), 'rhs of assignment should be signal/const!' )
+      'target' : ( lhs_types, 'lhs of assignment must be a signal!' ),
+      'value' : ( Signal, 'rhs of assignment should be signal or const!' )
+    }
+    s.type_expect[ 'BitsCast' ] = {
+      'value':( Signal, 'only signals/consts can be cast into bits!' )
     }
     s.type_expect[ 'Attribute' ] = {
-      'value':( ( Module ), 'the base of an attribute must be a module!' )
+      'value':( Component, 'the base of an attribute must be a module!' )
     }
     s.type_expect[ 'Index' ] = {
-      'value':( (Array, Signal, Const),\
-        'the base of an index must be an array, signal, or constant!' ),
-      'idx':( (Const, Signal), 'index must be a constant expression or a signal!' )
+      'idx':(Signal, 'index must be a signal or constant expression!'),
+      'value':(lhs_types, 'the base of an index must be an array or signal!')
     }
     s.type_expect[ 'Slice' ] = {
-      'value':( Signal, 'the base of a slice must be a signal!' ),
-      'lower':( Const, 'upper of slice must be a constant expression!' ),
-      'upper':( Const, 'lower of slice must be a constant expression!' )
+      'value':( lhs_types, 'the base of a slice must be a signal!' ),
+      'lower':( Signal, 'upper of slice must be a constant expression!' ),
+      'upper':( Signal, 'lower of slice must be a constant expression!' )
     }
 
   def enter( s, blk, rtlir ):
@@ -115,7 +119,7 @@ class BehavioralRTLIRTypeCheckVisitorL1( BehavioralRTLIRNodeVisitor ):
         exception_msg = type_rule[ 1 ]
 
         if eval( 'not isinstance( value.Type, target_type )' ):
-          raise PyMTLTypeError( s.blk, node, exception_msg )
+          raise PyMTLTypeError( s.blk, node.ast, exception_msg )
 
     except PyMTLTypeError:
       raise
@@ -135,135 +139,176 @@ class BehavioralRTLIRTypeCheckVisitorL1( BehavioralRTLIRNodeVisitor ):
   #-----------------------------------------------------------------------
 
   def visit_Assign( s, node ):
+
     # RHS should have the same type as LHS
-    rhs_type = node.value.Type
-    lhs_type = node.target.Type
+
+    rhs_type = node.value.Type.get_dtype()
+    lhs_type = node.target.Type.get_dtype()
 
     if not lhs_type( rhs_type ):
       raise PyMTLTypeError(
-        s.blk, node.ast, 'Unagreeable types between assignment LHS and RHS!'
+        s.blk, node.ast, 'Unagreeable types {} and {}!'.format(
+          lhs_type, rhs_type
+        )
       )
 
     node.Type = None
+
+  #-----------------------------------------------------------------------
+  # visit_FreeVar
+  #-----------------------------------------------------------------------
+
+  def visit_FreeVar( s, node ):
+
+    if not node.name in s.freevars.keys():
+      s.freevars[ node.name ] = node.obj
+
+    t = get_rtlir_type( node.obj )
+
+    if isinstance( t, Const ) and isinstance( t.get_dtype(), Vector ):
+
+      node._value = pymtl.mk_Bits( t.get_dtype().get_length() )( node.obj )
+
+    node.Type = t
 
   #-----------------------------------------------------------------------
   # visit_Base
   #-----------------------------------------------------------------------
 
   def visit_Base( s, node ):
-    # Mark this node as having type module
+
+    # Mark this node as having type Component
     # In L1 the `s` top component is the only possible base
-    node.Type = Module( node.base, s.type_env[freeze( node.base )].type_env )
+
+    node.Type = get_rtlir_type( node.base )
+
+    assert isinstance( node.Type, Component )
 
   #-----------------------------------------------------------------------
   # visit_Number
   #-----------------------------------------------------------------------
 
   def visit_Number( s, node ):
+
     # By default, number literals have bitwidth of 32
-    node.Type = Const( True, 32, node.value )
+
+    node.Type = get_rtlir_type( node.value )
+    node._value = pymtl.Bits32( node.value )
 
   #-----------------------------------------------------------------------
-  # visit_Bitwidth
+  # visit_BitsCast
   #-----------------------------------------------------------------------
 
-  def visit_Bitwidth( s, node ):
+  def visit_BitsCast( s, node ):
+
     nbits = node.nbits
     Type = node.value.Type
 
     # We do not check for bitwidth mismatch here because the user should
-    # be able to *explicitly* convert signals/constatns to different bitwidth.
+    # be able to explicitly convert signals/constatns to different bitwidth.
 
-    if not isinstance( Type, ( Signal, Const ) ):
-      # Array, Bool, Module cannot have bitwidth
-      raise PyMTLTypeError(
-        s.blk, node.ast, 'bitwidth does not apply to' + str(Type) + '!'
-      )
+    node.Type = Wire( Vector( nbits ) )
 
-    if isinstance( Type, Signal ):
-      node.Type = Signal( nbits )
-
-    elif isinstance( Type, Const ):
-      node.Type = Const( Type.is_static, nbits, Type.value )
+    if hasattr( node, '_value' ):
+      node._value = mk_Bits( nbits, node._value )
 
   #-----------------------------------------------------------------------
   # visit_Attribute
   #-----------------------------------------------------------------------
 
   def visit_Attribute( s, node ):
+
     # node.value should subclass RTLIRType.BaseAttr
     # Make sure node.value has an attribute named attr
-    if not node.attr in node.value.Type.obj.__dict__:
-      raise PyMTLTypeError(
-        s.blk, node.ast, 'class {base} does not have attribute {attr}!'.\
-        format( 
-          base = node.value.Type.obj.__class__.__name__,
-          attr = node.attr
-        )
-      )
 
-    # value.attr has the type that is specified in the type environment
-    attr_obj = node.value.Type.obj.__dict__[ node.attr ]
-    node.Type = node.value.Type.type_env[ freeze( attr_obj ) ]
+    if not node.value.Type.has_property( node.attr ):
+      raise PyMTLTypeError(
+        s.blk, node.ast, 'type {} does not have attribute {}!'.format(
+          node.value.Type, node.attr
+      ) )
+
+    # value.attr has the type that is specified by the base
+
+    node.Type = node.value.Type.get_property( node.attr )
 
   #-----------------------------------------------------------------------
   # visit_Index
   #-----------------------------------------------------------------------
 
   def visit_Index( s, node ):
-    if isinstance( node.idx.Type, Const ):
-      # If the index is a constant expression, it is possible to do static
-      # range check.
-      # Check whether the index is in the range of the array
-      if node.idx.Type.is_static:
-        if isinstance( node.value.Type, Array ):
-          if not ( 0 <= node.idx.Type.value <= node.value.Type.length ):
-            raise PyMTLTypeError(
-              s.blk, node.ast, 'array index out of range!'
-            )
 
-        else:
-          if not ( 0 <= node.idx.Type.value <= node.value.Type.nbits ):
-            raise PyMTLTypeError(
-              s.blk, node.ast, 'bit index out of range!'
-            )
+    idx = getattr( node.idx, '_value', None )
+
+    dtype = node.value.Type.get_dtype()
+
+    if isinstance( dtype, Array ):
+
+      if ( not idx is None ) and not ( 0<=idx<=dtype.get_dim_sizes()[0] ):
+
+        raise PyMTLTypeError(
+          s.blk, node.ast, 'array index out of range!'
+        )
+
+      node.Type = Wire( dtype.get_next_dim_type() )
+
+    elif isinstance( dtype, Vector ):
+
+      if ( not idx is None ) and not( 0<=idx<=dtype.get_length() ):
+
+        raise PyMTLTypeError(
+          s.blk, node.ast, 'bit selection index out of range!'
+        )
+
+      node.Type = Wire( Vector( 1 ) )
 
     else:
-      # This is a Signal type. No further static checking can be done
-      pass
 
-    if isinstance( node.value.Type, Array ):
-      # The result type should be array.Type
-      node.Type = node.value.Type.Type
-    else:
-      # Single bit signal
-      node.Type = Signal( 1 )
+      raise PyMTLTypeError(
+        s.blk, node.ast, 'cannot perform index on {}!'.format(
+          node.value.Type
+      ) )
 
   #-----------------------------------------------------------------------
   # visit_Slice
   #-----------------------------------------------------------------------
 
   def visit_Slice( s, node ):
-    # Check slice range only if lower and upper bounds are static
-    if node.lower.Type.is_static and node.upper.Type.is_static:
-      lower_val = node.lower.Type.value
-      upper_val = node.upper.Type.value
-      signal_nbits = node.value.Type.nbits
+
+    lower_val = getattr( node.lower, '_value', None )
+    upper_val  = getattr( node.upper, '_value', None )
+
+    dtype = node.value.Type.get_dtype()
+
+    if not isinstance( dtype, Vector ):
+
+      raise PyMTLTypeError(
+        s.blk, node.ast, 'cannot perform slicing on type {}!'.format(
+          node.value.Type
+      ) )
+
+    if not lower_val is None and not upper_val is None:
+
+      signal_nbits = dtype.get_length()
 
       # upper bound must be strictly larger than the lower bound
+
       if ( lower_val >= upper_val ):
         raise PyMTLTypeError(
           s.blk, node.ast,
           'the upper bound of a slice must be larger than the lower bound!'
         )
 
-      # upper & lower bound should lie in the bit width of the signal
+      # upper & lower bound should be less than the bit width of the signal
+
       if not ( 0 <= lower_val < upper_val <= signal_nbits ):
         raise PyMTLTypeError(
           s.blk, node.ast, 'upper/lower bound of slice out of width of signal!'
         )
 
-      node.Type = Signal( upper_val - lower_val )
+      node.Type = Wire( Vector( upper_val - lower_val ) )
 
     else:
-      node.Type = Signal( 0 )
+
+      raise PyMTLTypeError(
+        s.blk, node.ast, 'slice bounds must be constant!'
+      )

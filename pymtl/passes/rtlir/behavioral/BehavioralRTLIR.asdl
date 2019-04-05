@@ -13,7 +13,8 @@ module BehavioralRTLIR
        | For( loopvar_decl var, expr start, expr end, expr step, stmt* body )
 
   expr = Number( int value )
-       | Bitwidth( int nbits, expr value )
+       | BitsCast( int nbits, expr value )
+       | StructInst( object struct, string* keywords, expr* kwargs )
        | IfExp( expr cond, expr body, expr orelse )
        | UnaryOp( unaryop op, expr operand )
        | BoolOp( boolop op, expr* values )

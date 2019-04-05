@@ -7,12 +7,11 @@
 # Author : Peitian Pan
 # Date   : Feb 22, 2019
 
-from pymtl import *
+import pymtl, __builtin__
 
+from pymtl.dsl.Connectable import Signal as pymtl_Signal
 from pymtl.passes.utility.pass_utility import make_indent
-from pymtl.passes.rtlir                import get_type
-
-from RTLIRTypeString import rtlir_to_str
+from pymtl.passes.rtlir.RTLIRType      import *
 
 #-------------------------------------------------------------------------
 # verilog_name
@@ -20,7 +19,8 @@ from RTLIRTypeString import rtlir_to_str
 
 def verilog_name( name ):
 
-  return name.replace('[', '_').replace(']', '_')
+  # return name.replace('[', '_').replace(']', '_')
+  return name
 
 #-------------------------------------------------------------------------
 # verilator_name
@@ -28,7 +28,8 @@ def verilog_name( name ):
 
 def verilator_name( name ):
 
-  return verilog_name(name).replace('__', '___05F')
+  # return verilog_name(name).replace('__', '___05F')
+  return verilog_name(name)
 
 #-------------------------------------------------------------------------
 # pymtl_name
@@ -39,15 +40,44 @@ def pymtl_name( name ):
   return verilator_name( name )
 
 #-------------------------------------------------------------------------
+# get_nbits
+#-------------------------------------------------------------------------
+
+def get_nbits( port ):
+
+  dtype = get_rtlir_type( port ).get_dtype()
+
+  if isinstance( dtype, Array ):
+
+    return dtype.get_sub_dtype().get_length()
+
+  else:
+
+    return dtype.get_length()
+
+#-------------------------------------------------------------------------
+# get_c_dim_size
+#-------------------------------------------------------------------------
+
+def get_c_dim_size( port ):
+
+  dtype = get_rtlir_type( port ).get_dtype()
+
+  if isinstance( dtype, Array ):
+
+    return reduce( lambda s,i: s+'[{}]'.format(i), dtype.get_dim_sizes(), '' )
+
+  else:
+
+    return ''
+
+#-------------------------------------------------------------------------
 # generate_signal_print_c
 #-------------------------------------------------------------------------
 
 def generate_signal_print_c( name, port ):
 
-  # type_str = get_type( port ).type_str()
-  type_str = rtlir_to_str( get_type( port ) )
-
-  nbits = type_str[ 'nbits' ]
+  nbits = get_nbits( port )
 
   if    nbits <= 8:  fspec = 'x'
   elif  nbits <= 16: fspec = 'x'
@@ -58,7 +88,7 @@ def generate_signal_print_c( name, port ):
   name = verilator_name( name )
 
   return\
-    'printf( "{name} = %{fspec}\\n", model->{name} );'.format(**locals())
+    'printf( "{name} = %{fspec}\\n", model->{name} );'.format( **locals() )
 
 #-------------------------------------------------------------------------
 # generate_signal_decl_c
@@ -66,10 +96,8 @@ def generate_signal_print_c( name, port ):
 
 def generate_signal_decl_c( name, port ):
 
-  # type_str = get_type( port ).type_str()
-  type_str = rtlir_to_str( get_type( port ) )
-
-  nbits = type_str[ 'nbits' ]
+  nbits = get_nbits( port )
+  c_dim_size = get_c_dim_size( port )
 
   if    nbits <= 8:  data_type = 'unsigned char'
   elif  nbits <= 16: data_type = 'unsigned short'
@@ -79,10 +107,7 @@ def generate_signal_decl_c( name, port ):
 
   name = verilator_name( name )
 
-  return '{data_type} * {name}{c_dim_size};'.format(
-    data_type = data_type, name = name,
-    c_dim_size = type_str[ 'c_dim_size' ]
-  )
+  return '{data_type} * {name}{c_dim_size};'.format( **locals() )
 
 #-------------------------------------------------------------------------
 # generate_signal_init_c
@@ -92,27 +117,29 @@ def generate_signal_init_c( name, port ):
 
   ret = []
 
-  type_str = rtlir_to_str( get_type( port ) )
-
-  nbits     = type_str[ 'nbits' ]
-  deference = '&' if nbits <= 64 else ''
+  nbits      = get_nbits( port )
+  deference  = '&' if nbits <= 64 else ''
+  c_dim_size = get_c_dim_size( port )
 
   name = verilator_name( name )
 
-  if type_str[ 'c_dim_size' ] != '':
-    # This is a potentially recursive array structure
-    n_dim_size = type_str[ 'n_dim_size' ]
+  if c_dim_size:
 
-    subscript_str = ''
+    # This is a potentially recursive array structure
+
+    n_dim_size = get_rtlir_type( port ).get_dtype().get_dim_sizes()
+
+    sub = ''
 
     for idx, dim_size in enumerate( n_dim_size ):
-      ret.append( 'for ( int i_{idx} = 0; i_{idx} < {dim_size}; i_{idx}++ )'.format(
-        idx = idx, dim_size = dim_size
+      ret.append(
+        'for ( int i_{idx} = 0; i_{idx} < {dim_size}; i_{idx}++ )'.format(
+          **locals()
       ) )
-      subscript_str += '[i_{idx}]'.format( idx = idx )
+      sub += '[i_{idx}]'.format( **locals() )
 
     ret.append( 'm->{name}{sub} = {deference}model->{name}{sub};'.format(
-      name = name, deference = deference, sub = subscript_str
+      **locals()
     ) )
 
     # Indent the whole for loop appropriately
@@ -122,6 +149,7 @@ def generate_signal_init_c( name, port ):
         ret[ idx ] = '  ' + ret[ idx ]
 
   else:
+
     ret.append( 'm->{name} = {deference}model->{name};'.format( **locals() ) )
 
   return ret
@@ -171,10 +199,68 @@ def generate_default_ssg( ports ):
   inports, outports = [], []
 
   for port in ports:
-    if   isinstance( port, InVPort ):   inports.append( port._dsl.my_name )
-    elif isinstance( port, OutVPort ): outports.append( port._dsl.my_name )
+
+    if isinstance( port, pymtl.InVPort ):
+      inports.append( port._dsl.my_name )
+
+    elif isinstance( port, pymtl.OutVPort ):
+      outports.append( port._dsl.my_name )
 
   return [ ( outports, map( lambda x: 'B'+x, inports ) ) ]
+
+#-------------------------------------------------------------------------
+# get_struct_objects
+#-------------------------------------------------------------------------
+
+def get_struct_objects( interface ):
+
+  def get_struct_class( port ):
+
+    assert isinstance( port, pymtl_Signal )
+
+    Type = port._dsl.Type
+
+    assert hasattr(Type, '__name__') and not Type.__name__ in dir(__builtin__)
+
+    return Type
+
+  ret = {}
+
+  for name, port in interface:
+
+    rtype = get_rtlir_type( port )
+    dtype = rtype.get_dtype()
+
+    if isinstance( dtype, Struct ):
+
+      if dtype.get_name() in ret: continue
+    
+      # Try to get the class object of this struct
+
+      Type = get_struct_class( port )
+
+    elif isinstance( dtype, Array ) and\
+         isinstance( dtype.get_sub_dtype(), Struct ):
+
+      dtype = dtype.get_sub_dtype()
+
+      if dtype.get_name() in ret: continue
+
+      _port = port
+
+      while isinstance( _port, list ):
+
+        _port = _port[0]
+           
+      Type = get_struct_class( _port )
+
+    else: continue
+
+    assert Type.__name__ == dtype.get_name()
+
+    ret[ Type.__name__ ] = Type
+
+  return ret
 
 #-------------------------------------------------------------------------
 # generate_signal_decl_py
@@ -182,26 +268,254 @@ def generate_default_ssg( ports ):
 
 def generate_signal_decl_py( name, port ):
 
-  # type_str = get_type( port ).type_str()
-  type_str = rtlir_to_str( get_type( port ) )
-
   name = pymtl_name( name )
 
-  nbits = type_str[ 'nbits' ]
-  dtype_str = type_str[ 'py_type' ]
+  nbits = get_nbits( port )
+
+  rtype = get_rtlir_type( port )
+  dtype = rtype.get_dtype()
+
+  assert isinstance( rtype, Port )
+
+  if rtype.get_direction() == 'input':
+
+    direction = 'InVPort'
+
+  elif rtype.get_direction() == 'output':
+
+    direction = 'OutVPort'
+
+  else: assert False
+
+  c_dim_size = get_c_dim_size( port )
 
   ret = '{}'
 
-  if type_str[ 'c_dim_size' ] != '':
-    n_dim_size = type_str[ 'n_dim_size' ]
+  # Struct type
 
-    for idx, dim_size in enumerate( n_dim_size ):
-      ret = ret.format( '[{{}} for i_{idx} in xrange({size})]'.format(
-        idx = idx, size = dim_size
-      ) )
+  if isinstance( dtype, Struct ):
 
-  ret = ret.format( dtype_str+'(Bits'+str(nbits)+')' )
+    dtype_name = dtype.get_name()
+
+    ret = '{direction}({dtype_name})'.format( **locals() )
+
+  else:
+
+    # Array type
+
+    if c_dim_size:
+
+      n_dim_size = dtype.get_dim_sizes()
+
+      for idx, dim_size in enumerate( n_dim_size ):
+        ret = ret.format( '[{{}} for i_{idx} in xrange({dim_size})]'.format(
+          **locals()
+        ) )
+
+      dtype = dtype.get_sub_dtype()
+
+    # Vector type
+
+    if isinstance( dtype, Vector ):
+
+      ret = ret.format( direction+'(Bits'+str(nbits)+')' )
+
+    # Struct type
+
+    elif isinstance( dtype, Struct ):
+
+      ret = ret.format( direction+'('+dtype.get_name()+')' )
+
+    else: assert False
+
   ret = 's.' + name + ' = ' + ret
+
+  return ret
+
+#-------------------------------------------------------------------------
+# flatten_packed_dtype
+#-------------------------------------------------------------------------
+
+def flatten_packed_dtype( name, dtype ):
+
+  if isinstance( dtype, Vector ):
+
+    return [ ( 's.'+name, dtype.get_length() ) ]
+
+  elif isinstance( dtype, Struct ):
+
+    ret = []
+
+    for field_name, field_dtype in dtype.get_all_properties():
+
+      ret.extend( flatten_packed_dtype( name+'.'+field_name, field_dtype ) )
+
+    return ret
+
+  else: assert False
+
+#-------------------------------------------------------------------------
+# read_ffi_model_py
+#-------------------------------------------------------------------------
+
+def read_ffi_model_py( lhs, rhs, name, dtype ):
+
+  dtype_length = dtype.get_length()
+
+  if   dtype_length <= 8  : VL_BITWIDTH = 8
+  elif dtype_length <= 16 : VL_BITWIDTH = 16
+  elif dtype_length <= 32 : VL_BITWIDTH = 32
+  elif dtype_length <= 64 : VL_BITWIDTH = 64
+  else:              VL_BITWIDTH = 32
+
+  tplt = '{dtype_name}[{lhs_start}:{lhs_stop}] = ' +\
+         'get_bit_slice( {rhs_signal}, {rhs_start}, {rhs_stop} )'
+
+  ret = []
+
+  vec_list = flatten_packed_dtype( name, dtype )
+  vec_list.reverse()
+
+  cur_vec_list = []
+  rhs_pos, rhs_cur_bit, lhs_cur_bit, signal_idx = 0, 0, 0, 0
+
+  while signal_idx < len( vec_list ):
+
+    rhs_rest_bit = VL_BITWIDTH-rhs_cur_bit
+    dtype_name = vec_list[ signal_idx ][0]
+    nbits = vec_list[ signal_idx ][1] - lhs_cur_bit
+
+    if rhs_rest_bit > nbits:
+
+      lhs_start = lhs_cur_bit
+      lhs_stop = lhs_cur_bit+nbits
+      rhs_signal = (rhs+'[{rhs_pos}]').format( **locals() )
+      rhs_start = rhs_cur_bit
+      rhs_stop = rhs_cur_bit+nbits
+
+      rhs_cur_bit += nbits
+      lhs_cur_bit = 0
+      signal_idx += 1
+
+    else:
+
+      if rhs_rest_bit == nbits:
+
+        lhs_start = lhs_cur_bit
+        lhs_stop = lhs_cur_bit+nbits
+        rhs_signal = (rhs+'[{rhs_pos}]').format( **locals() )
+        rhs_start = rhs_cur_bit
+        rhs_stop = rhs_cur_bit+nbits
+
+        rhs_cur_bit = 0
+        lhs_cur_bit = 0
+        signal_idx += 1
+
+      else:
+
+        lhs_start = lhs_cur_bit
+        lhs_stop = lhs_cur_bit+rhs_rest_bit
+        rhs_signal = (rhs+'[{rhs_pos}]').format( **locals() )
+        rhs_start = rhs_cur_bit
+        rhs_stop = rhs_cur_bit+rhs_rest_bit
+
+        rhs_cur_bit = 0
+        lhs_cur_bit += rhs_rest_bit
+
+      rhs_pos += 1
+
+    ret.append( tplt.format( **locals() ) )
+
+  return ret
+
+#-------------------------------------------------------------------------
+# write_ffi_model_py
+#-------------------------------------------------------------------------
+
+def write_ffi_model_py( lhs, rhs, name, dtype ):
+
+  ret = []
+
+  dtype_length = dtype.get_length()
+
+  if   dtype_length <= 8  : VL_BITWIDTH = 8
+  elif dtype_length <= 16 : VL_BITWIDTH = 16
+  elif dtype_length <= 32 : VL_BITWIDTH = 32
+  elif dtype_length <= 64 : VL_BITWIDTH = 64
+  else:              VL_BITWIDTH = 32
+
+  vec_list = flatten_packed_dtype( name, dtype )
+  vec_list.reverse()
+
+  cur_vec_list = []
+  lhs_pos, lhs_cur_bit, rhs_cur_bit, signal_idx = 0, 0, 0, 0
+
+  while signal_idx < len( vec_list ):
+
+    lhs_rest_bit = VL_BITWIDTH-lhs_cur_bit
+    nbits = vec_list[ signal_idx ][1] - rhs_cur_bit
+
+    if lhs_rest_bit > nbits:
+
+      cur_vec_list.append( (
+        vec_list[signal_idx][0]+'[{}:{}]'.format(
+          rhs_cur_bit, rhs_cur_bit+nbits ),
+        0 if len(cur_vec_list) == 0\
+          else cur_vec_list[-1][2]+cur_vec_list[-1][1],
+        nbits
+      ) )
+      lhs_cur_bit += nbits
+      rhs_cur_bit = 0
+      signal_idx += 1
+
+    else:
+
+      if lhs_rest_bit == nbits:
+
+        cur_vec_list.append( (
+          vec_list[signal_idx][0]+'[{}:{}]'.format(
+            rhs_cur_bit, rhs_cur_bit+nbits ),
+          0 if len(cur_vec_list) == 0\
+            else cur_vec_list[-1][2]+cur_vec_list[-1][1],
+          nbits
+        ) )
+        lhs_cur_bit = 0
+        rhs_cur_bit = 0
+        signal_idx += 1
+
+      else:
+
+        cur_vec_list.append( (
+          vec_list[signal_idx][0]+'[{}:{}]'.format(
+            rhs_cur_bit, rhs_cur_bit+lhs_rest_bit ),
+          0 if len(cur_vec_list) == 0\
+            else cur_vec_list[-1][2]+cur_vec_list[-1][1],
+          lhs_rest_bit
+        ) )
+        lhs_cur_bit = 0
+        rhs_cur_bit += lhs_rest_bit
+
+      rhs_str = reduce( lambda s, x: '({}<<{})|({})'.format(
+        'int('+x[0]+')', x[1], s ), cur_vec_list[1:],
+        'int('+cur_vec_list[0][0]+')' )
+
+      ret.append(
+        (lhs+'='+rhs_str).format( name = name+'[{}]'.format(lhs_pos) )
+      )
+
+      lhs_pos += 1
+
+      cur_vec_list = []
+
+  if cur_vec_list:
+
+    rhs_str = reduce( lambda s, x: '({}<<{})|({})'.format(
+      'int('+x[0]+')', x[1], s ), cur_vec_list[1:],
+      'int('+cur_vec_list[0][0]+')' )
+
+    ret.append(
+      (lhs+'='+rhs_str).format( name = name+'[{}]'.format(lhs_pos) )
+    )
 
   return ret
 
@@ -244,10 +558,12 @@ def generate_seq_upblk_py( ports, ssg ):
 
   for in_port in seq_in_ports:
     name = pymtl_name( in_port )
-    for idx, offset in get_indices( port_objs[ in_port ] ):
-      set_inputs.append( 's._ffi_m.{name}[{idx}] = s.{name}{offset}'.format(
-        **locals()
-      ) )
+
+    dtype = get_rtlir_type( port_objs[ in_port ] ).get_dtype()
+
+    set_inputs.extend( write_ffi_model_py(
+      's._ffi_m.{name}', 's.{name}', name, dtype
+    ) )
 
     constraints.append( 'U(tick_sequential) < WR(s.{}),'.format( name ) )
 
@@ -308,10 +624,17 @@ def generate_comb_upblks_py( ports, ssg ):
 
     for in_port in inports:
       name = pymtl_name(in_port)
-      for idx, offset in get_indices( port_objs[ in_port ] ):
-        set_inputs.append( 's._ffi_m.{name}[{idx}] = s.{name}{offset}'.format(
-          **locals()
-        ) )
+
+      dtype = get_rtlir_type( port_objs[ in_port ] ).get_dtype()
+
+      set_inputs.extend( write_ffi_model_py(
+        's._ffi_m.{name}', 's.{name}', name, dtype
+      ) )
+
+      # for idx, offset in get_indices( port_objs[ in_port ] ):
+        # set_inputs.append( 's._ffi_m.{name}[{idx}] = s.{name}{offset}'.format(
+          # **locals()
+        # ) )
 
       constraints.append( 'U(comb_eval_{upblk_num}) < WR(s.{name}),'.format(
         **locals()
@@ -354,10 +677,17 @@ def generate_readout_upblks_py( ports, ssg ):
     read_outputs = []
 
     for outport in out:
-      for idx, offset in get_indices( port_objs[ outport ] ):
-        read_outputs.append( 's.{name}{offset} = s._ffi_m.{name}[{idx}]'.format(
-          name = pymtl_name(outport), offset = offset, idx = idx
-        ) )
+      name = pymtl_name( outport )
+
+      dtype = get_rtlir_type( port_objs[ outport ] ).get_dtype()
+
+      read_outputs.extend( read_ffi_model_py(
+        's.{name}', 's._ffi_m.{name}', name, dtype
+      ) )
+      # for idx, offset in get_indices( port_objs[ outport ] ):
+        # read_outputs.append( 's.{name}{offset} = s._ffi_m.{name}[{idx}]'.format(
+          # name = pymtl_name(outport), offset = offset, idx = idx
+        # ) )
 
       constraints.append( 'U(readout_{idx}) < RD(s.{name}),'.format(
         idx = upblk_num, name = pymtl_name(outport)
@@ -425,9 +755,7 @@ def generate_internal_line_trace_py( ports ):
 
 def get_indices( port ):
 
-  type_str = rtlir_to_str( get_type( port ) )
-
-  nbits = type_str[ 'nbits' ]
+  nbits = get_nbits( port )
 
   num_assigns = 1 if nbits <= 64 else (nbits-1)/32+1
 

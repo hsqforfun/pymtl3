@@ -94,7 +94,9 @@ def create_verilator_c_wrapper( top_name, interface ):
 
   port_cdefs = []
 
-  for name, port in interface: port_cdefs.append( generate_signal_decl_c( name, port ) )
+  for name, port in interface:
+    
+    port_cdefs.append( generate_signal_decl_c( name, port ) )
 
   port_externs = copy.copy( port_cdefs )
   make_indent( port_externs, 2 )

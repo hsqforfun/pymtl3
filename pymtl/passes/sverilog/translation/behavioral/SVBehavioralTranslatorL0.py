@@ -7,7 +7,8 @@
 # Author : Peitian Pan
 # Date   : March 18, 2019
 
-from pymtl.passes.rtlir.translation.behavioral import BehavioralTranslatorL0
+from pymtl.passes.rtlir.translation.behavioral.BehavioralTranslatorL0\
+    import BehavioralTranslatorL0
 
 class SVBehavioralTranslatorL0( BehavioralTranslatorL0 ):
   pass

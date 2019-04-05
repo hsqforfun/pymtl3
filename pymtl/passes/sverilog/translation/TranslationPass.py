@@ -24,7 +24,7 @@ def mk_TranslationPass( _SVRTLIRTranslator ):
       translator = _SVRTLIRTranslator( top )
       translator.translate()
 
-      module_name = translator.component[top].component_name
+      module_name = translator._top_module_name
       output_file = module_name + '.sv'
       ssg_file    = module_name + '.ssg'
 

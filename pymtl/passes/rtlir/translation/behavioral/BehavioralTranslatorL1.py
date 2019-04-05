@@ -5,18 +5,14 @@
 # Author : Peitian Pan
 # Date   : March 22, 2019
 
-import ast
+from pymtl.passes.rtlir import get_rtlir_type
 
-from ..utility import *
-from ..BaseRTLIRTranslator import TranslatorMetadata
+from pymtl.passes.rtlir.behavioral.BehavioralRTLIRGenL1Pass\
+    import BehavioralRTLIRGenL1Pass
+from pymtl.passes.rtlir.behavioral.BehavioralRTLIRTypeCheckL1Pass\
+    import BehavioralRTLIRTypeCheckL1Pass
+
 from BehavioralTranslatorL0 import BehavioralTranslatorL0
-
-from BehavioralRTLIRGenL1Pass import BehavioralRTLIRGenL1Pass
-from BehavioralRTLIRTypeCheckL1Pass import BehavioralRTLIRTypeCheckL1Pass
-
-from BehavioralRTLIR       import *
-from BehavioralRTLIRTypeL1 import BaseBehavioralRTLIRType
-from errors                import PyMTLSyntaxError
 
 class BehavioralTranslatorL1( BehavioralTranslatorL0 ):
 
@@ -24,45 +20,54 @@ class BehavioralTranslatorL1( BehavioralTranslatorL0 ):
 
     super( BehavioralTranslatorL1, s ).__init__( top )
 
-    s.behavioral = TranslatorMetadata()
-
     s.behavioral.rtlir = {}
-    s.behavioral.type_env = s.gen_type_env( top )
+    s.behavioral.freevars = {}
+    s.behavioral.upblk_srcs = {}
 
-    s.gen_behavioral_trans_l1_metadata( top )
+    s.gen_behavioral_trans_metadata( top )
 
   #-----------------------------------------------------------------------
-  # gen_behavioral_trans_l1_metadata
+  # gen_behavioral_trans_metadata
   #-----------------------------------------------------------------------
 
-  def gen_behavioral_trans_l1_metadata( s, m ):
+  def gen_behavioral_trans_metadata( s, m ):
 
     m.apply( BehavioralRTLIRGenL1Pass() )
-    m.apply( BehavioralRTLIRTypeCheckL1Pass( s.behavioral.type_env ) )
+    m.apply( BehavioralRTLIRTypeCheckL1Pass() )
 
-    s.behavioral.rtlir[m] = m._pass_behavioral_rtlir_gen.rtlir_upblks
+    s.behavioral.rtlir[m] =\
+        m._pass_behavioral_rtlir_gen.rtlir_upblks
+    s.behavioral.freevars[m] =\
+        m._pass_behavioral_rtlir_type_check.rtlir_freevars
 
   #-----------------------------------------------------------------------
   # gen_type_env
   #-----------------------------------------------------------------------
-  # L1 assumes only the top component in the component hierarchy.
+  # L1 assumes only the top component is in the component hierarchy.
 
-  def gen_type_env( s, m ):
+  # def gen_type_env( s, top ):
 
-    ret = {}
+    # def collect_type_env( m, type_env ):
 
-    Type = BaseBehavioralRTLIRType.get_type( m )
+      # m_type = get_rtlir_type( m )
 
-    ret[ m ] = Type
+      # type_env[ m ]
 
-    ret.update( Type.type_env )
+      # for name, rtype in m.get_all_properties():
 
-    return ret
+        # type_env[ name ] = rtype
+
+    # ret = {}
+
+    # collect_type_env( top, ret )
+
+    # return ret
 
   #-----------------------------------------------------------------------
   # translate_behavioral
   #-----------------------------------------------------------------------
 
+  # Override
   def translate_behavioral( s, m ):
 
     # Generate behavioral RTLIR for component `m`
@@ -77,21 +82,18 @@ class BehavioralTranslatorL1( BehavioralTranslatorL0 ):
     for upblk_type in ( 'CombUpblk', 'SeqUpblk' ):
       for blk in upblks[ upblk_type ]:
 
-        upblk_srcs.append( s.__class__.rtlir_tr_upblk_decl(
-          m, blk, s.behavioral.rtlir[m][ blk ]
+        upblk_srcs.append( s.rtlir_tr_upblk_decl(
+          m, blk, s.behavioral.rtlir[ m ][ blk ]
         ) )
 
-    s.component[ m ].upblk_srcs =\
-        s.__class__.rtlir_tr_upblk_decls( upblk_srcs )
+    s.behavioral.upblk_srcs[m] = s.rtlir_tr_upblk_decls( upblk_srcs )
 
   #-----------------------------------------------------------------------
   # Methods to be implemented by the backend translator
   #-----------------------------------------------------------------------
 
-  @staticmethod
-  def rtlir_tr_upblk_decls( upblk_srcs ):
+  def rtlir_tr_upblk_decls( s, upblk_srcs ):
     raise NotImplementedError()
 
-  @staticmethod
-  def rtlir_tr_upblk_decl( m, upblk, rtlir_upblk ):
+  def rtlir_tr_upblk_decl( s, m, upblk, rtlir_upblk ):
     raise NotImplementedError()

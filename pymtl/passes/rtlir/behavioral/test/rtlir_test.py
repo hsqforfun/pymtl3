@@ -9,7 +9,7 @@
 import pytest
 
 from pymtl                             import *
-from pymtl.passes.rtlir.translation.behavioral.BehavioralRTLIR import *
+from pymtl.passes.rtlir.behavioral.BehavioralRTLIR import *
 from pymtl.passes.utility.test_utility import expected_failure, do_test
 
 from .. import BehavioralRTLIRGenPass
@@ -22,12 +22,15 @@ from ..errors                          import PyMTLTypeError
 # reference.
 
 def local_do_test( m ):
+
   ref = m._rtlir_test_ref
   m.elaborate()
   BehavioralRTLIRGenPass()( m )
+  BehavioralRTLIRTypeCheckPass()( m )
 
   for blk in m.get_update_blocks():
-    assert m._pass_behavioral_rtlir_gen.rtlir_upblks[ blk ] == ref[ blk.__name__ ]
+    assert\
+      m._pass_behavioral_rtlir_gen.rtlir_upblks[ blk ] == ref[ blk.__name__ ]
 
 #-------------------------------------------------------------------------
 # test_index_basic
@@ -80,28 +83,26 @@ def test_mismatch_width_assign( do_test ):
       def mismatch_width_assign():
         s.out = s.in_
 
-  with expected_failure( PyMTLTypeError ):
+  a = A()
 
-    a = A()
+  a._rtlir_test_ref = { 'mismatch_width_assign' : CombUpblk(
+    'mismatch_width_assign', [ Assign(
+      Attribute( Base( a ), 'out' ), Attribute( Base( a ), 'in_' )
+    )
+  ] ) }
 
-    a._rtlir_test_ref = { 'mismatch_width_assign' : CombUpblk(
-      'mismatch_width_assign', [ Assign(
-        Attribute( Base( a ), 'out' ), Attribute( Base( a ), 'in_' )
-      )
-    ] ) }
+  a._test_vector = [
+                'in_             *out',
+    [        Bits16,           Bits8 ],
 
-    a._test_vector = [
-                  'in_             *out',
-      [        Bits16,           Bits8 ],
+    [             0,               0 ],
+    [             2,               2 ],
+    [    Bits16(-1),       Bits8(-1) ],
+    [    Bits16(-2),       Bits8(-2) ],
+    [ Bits16(32767),      Bits8(255) ],
+  ]
 
-      [             0,               0 ],
-      [             2,               2 ],
-      [    Bits16(-1),       Bits8(-1) ],
-      [    Bits16(-2),       Bits8(-2) ],
-      [ Bits16(32767),      Bits8(255) ],
-    ]
-
-    do_test( a )
+  do_test( a )
 
 #-------------------------------------------------------------------------
 # test_slicing_basic
@@ -158,7 +159,7 @@ def test_bits_basic( do_test ):
 
   a._rtlir_test_ref = { 'bits_basic' : CombUpblk( 'bits_basic', [
     Assign( Attribute( Base( a ), 'out' ),
-      BinOp( Attribute( Base( a ), 'in_' ), Add(), Bitwidth( 16, Number( 10 ) ) ) )
+      BinOp( Attribute( Base( a ), 'in_' ), Add(), BitsCast( 16, Number( 10 ) ) ) )
   ] ) }
 
   a._test_vector = [
@@ -202,7 +203,7 @@ def test_index_bits_slicing( do_test ):
           Slice( Index( Attribute( Base( a ), 'in_' ), Number( 2 ) ), Number( 0 ), Number( 8 ) ),
         ),
         Add(),
-        Bitwidth( 8, Number( 10 ) )
+        BitsCast( 8, Number( 10 ) )
       )
     ),
     Assign( 
@@ -214,7 +215,7 @@ def test_index_bits_slicing( do_test ):
           Index( Attribute( Base( a ), 'in_' ), Number( 4 ) )
         ),
         Add(),
-        Bitwidth( 16, Number( 1 ) )
+        BitsCast( 16, Number( 1 ) )
       )
     ),
   ] ) }
@@ -303,9 +304,9 @@ def test_if_basic( do_test ):
 
   a._rtlir_test_ref = {
     'if_basic' : CombUpblk( 'if_basic', [ If(
-      Compare( Slice( Attribute( Base( a ), 'in_' ), Number( 0 ), Number( 8 ) ), Eq(), Bitwidth( 8, Number( 255 ) ) ),
+      Compare( Slice( Attribute( Base( a ), 'in_' ), Number( 0 ), Number( 8 ) ), Eq(), BitsCast( 8, Number( 255 ) ) ),
       [ Assign( Attribute( Base( a ), 'out' ), Slice( Attribute( Base( a ), 'in_' ), Number( 8 ), Number( 16 ) ) ) ],
-      [ Assign( Attribute( Base( a ), 'out' ), Bitwidth( 8, Number( 0 ) ) ) ]
+      [ Assign( Attribute( Base( a ), 'out' ), BitsCast( 8, Number( 0 ) ) ) ]
     )
   ] ) }
 

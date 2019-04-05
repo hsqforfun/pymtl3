@@ -21,7 +21,7 @@ def gen_connections( top ):
   reader-writer relations. These are needed to gen the
   continuous assignment statements."""
 
-  nets = top.get_all_nets()
+  nets = top.get_all_value_nets()
   adjs = top.get_signal_adjacency_dict()
 
   connections = {}
@@ -81,32 +81,3 @@ def get_topmost_member( model, signal ):
     sig = sig._dsl.parent_obj
 
   return sig
-
-#-------------------------------------------------------------------------
-# is_BitsX
-#-------------------------------------------------------------------------
-
-def is_BitsX( obj ):
-  """Is obj a BitsX class?"""
-
-  try:
-    if obj.__name__.startswith( 'Bits' ):
-      try:
-        n = int( obj.__name__[4:] )
-        return True
-      except:
-        return False
-  except:
-    return False
-
-  return False
-
-#-------------------------------------------------------------------------
-# freeze
-#-------------------------------------------------------------------------
-
-def freeze( obj ):
-
-  if isinstance( obj, list ):
-    return tuple( freeze( o ) for o in obj )
-  return obj
