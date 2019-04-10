@@ -12,6 +12,7 @@ import pymtl, __builtin__
 from pymtl.dsl.Connectable import Signal as pymtl_Signal
 from pymtl.passes.utility.pass_utility import make_indent
 from pymtl.passes.rtlir.RTLIRType      import *
+from pymtl.passes.rtlir.structural.StructuralRTLIRSignalExpr import *
 
 #-------------------------------------------------------------------------
 # verilog_name
@@ -19,8 +20,7 @@ from pymtl.passes.rtlir.RTLIRType      import *
 
 def verilog_name( name ):
 
-  # return name.replace('[', '_').replace(']', '_')
-  return name
+  return name.replace('[', '_$').replace(']', '')
 
 #-------------------------------------------------------------------------
 # verilator_name
@@ -28,8 +28,7 @@ def verilog_name( name ):
 
 def verilator_name( name ):
 
-  # return verilog_name(name).replace('__', '___05F')
-  return verilog_name(name)
+  return verilog_name(name).replace('_$', '___024')
 
 #-------------------------------------------------------------------------
 # pymtl_name
@@ -37,7 +36,7 @@ def verilator_name( name ):
 
 def pymtl_name( name ):
 
-  return verilator_name( name )
+  return name
 
 #-------------------------------------------------------------------------
 # get_nbits
@@ -45,15 +44,19 @@ def pymtl_name( name ):
 
 def get_nbits( port ):
 
-  dtype = get_rtlir_type( port ).get_dtype()
+  if isinstance( port, Array ): rtype = port.get_sub_type()
+  else: rtype = port
 
-  if isinstance( dtype, Array ):
+  return rtype.get_dtype().get_length()
 
-    return dtype.get_sub_dtype().get_length()
+#-------------------------------------------------------------------------
+# get_n_dim_size
+#-------------------------------------------------------------------------
 
-  else:
+def get_n_dim_size( port ):
 
-    return dtype.get_length()
+  if isinstance( port, Array ): return port.get_dim_sizes()
+  else: return []
 
 #-------------------------------------------------------------------------
 # get_c_dim_size
@@ -61,15 +64,7 @@ def get_nbits( port ):
 
 def get_c_dim_size( port ):
 
-  dtype = get_rtlir_type( port ).get_dtype()
-
-  if isinstance( dtype, Array ):
-
-    return reduce( lambda s,i: s+'[{}]'.format(i), dtype.get_dim_sizes(), '' )
-
-  else:
-
-    return ''
+  return reduce( lambda s,i: s+'[{}]'.format(i), get_n_dim_size( port ), '' )
 
 #-------------------------------------------------------------------------
 # generate_signal_print_c
@@ -115,20 +110,17 @@ def generate_signal_decl_c( name, port ):
 
 def generate_signal_init_c( name, port ):
 
-  ret = []
-
+  ret        = []
   nbits      = get_nbits( port )
   deference  = '&' if nbits <= 64 else ''
   c_dim_size = get_c_dim_size( port )
-
-  name = verilator_name( name )
+  name       = verilator_name( name )
 
   if c_dim_size:
 
     # This is a potentially recursive array structure
 
-    n_dim_size = get_rtlir_type( port ).get_dtype().get_dim_sizes()
-
+    n_dim_size = get_n_dim_size( port )
     sub = ''
 
     for idx, dim_size in enumerate( n_dim_size ):
@@ -175,7 +167,8 @@ def load_ssg( ssg_name ):
         pos = line.find( '=>' )
 
         if pos == -1:
-          raise Exception( '.ssg file does not have the correct format!' )
+          raise Exception(
+            '{} does not have the correct format!'.format( ssg_name ) )
 
         in_ports  = ssg_rule[ : pos ].strip()
         out_ports = ssg_rule[ pos+2 : ].strip()
@@ -194,17 +187,21 @@ def load_ssg( ssg_name ):
 # outport ports depends on all input ports (both combinationally and
 # sequentially).
 
-def generate_default_ssg( ports ):
+def generate_default_ssg( unpacked_ports ):
 
   inports, outports = [], []
 
-  for port in ports:
+  for name, port in unpacked_ports:
 
-    if isinstance( port, pymtl.InVPort ):
-      inports.append( port._dsl.my_name )
+    if   port.get_direction() == 'input':  inports.append( name )
+    elif port.get_direction() == 'output': outports.append( name )
+    else: assert False
 
-    elif isinstance( port, pymtl.OutVPort ):
-      outports.append( port._dsl.my_name )
+    # if isinstance( port, pymtl.InVPort ):
+      # inports.append( port._dsl.my_name )
+
+    # elif isinstance( port, pymtl.OutVPort ):
+      # outports.append( port._dsl.my_name )
 
   return [ ( outports, map( lambda x: 'B'+x, inports ) ) ]
 
@@ -212,13 +209,13 @@ def generate_default_ssg( ports ):
 # get_struct_objects
 #-------------------------------------------------------------------------
 
-def get_struct_objects( interface ):
+def get_struct_objects( port_objs ):
 
-  def get_struct_class( port ):
+  def get_struct_class( port_obj ):
 
-    assert isinstance( port, pymtl_Signal )
+    assert isinstance( port_obj, pymtl_Signal )
 
-    Type = port._dsl.Type
+    Type = port_obj._dsl.Type
 
     assert hasattr(Type, '__name__') and not Type.__name__ in dir(__builtin__)
 
@@ -226,9 +223,10 @@ def get_struct_objects( interface ):
 
   ret = {}
 
-  for name, port in interface:
+  for port_obj in port_objs:
 
-    rtype = get_rtlir_type( port )
+    rtype = get_rtlir_type( port_obj )
+    assert isinstance( rtype, Port )
     dtype = rtype.get_dtype()
 
     if isinstance( dtype, Struct ):
@@ -236,23 +234,11 @@ def get_struct_objects( interface ):
       if dtype.get_name() in ret: continue
     
       # Try to get the class object of this struct
+      # I think this should be enough even for structs with nested
+      # structs ( i.e. you have that nested struct once you have the top
+      # level struct )... Need to check this later!
 
-      Type = get_struct_class( port )
-
-    elif isinstance( dtype, Array ) and\
-         isinstance( dtype.get_sub_dtype(), Struct ):
-
-      dtype = dtype.get_sub_dtype()
-
-      if dtype.get_name() in ret: continue
-
-      _port = port
-
-      while isinstance( _port, list ):
-
-        _port = _port[0]
-           
-      Type = get_struct_class( _port )
+      Type = get_struct_class( port_obj )
 
     else: continue
 
@@ -272,61 +258,40 @@ def generate_signal_decl_py( name, port ):
 
   nbits = get_nbits( port )
 
-  rtype = get_rtlir_type( port )
+  if isinstance( port, Array ): rtype = port.get_sub_type()
+  else: rtype = port
   dtype = rtype.get_dtype()
-
   assert isinstance( rtype, Port )
 
-  if rtype.get_direction() == 'input':
-
-    direction = 'InVPort'
-
-  elif rtype.get_direction() == 'output':
-
-    direction = 'OutVPort'
-
+  if rtype.get_direction() == 'input': direction = 'InVPort'
+  elif rtype.get_direction() == 'output': direction = 'OutVPort'
   else: assert False
 
-  c_dim_size = get_c_dim_size( port )
-
   ret = '{}'
+  n_dim_size = get_n_dim_size( port )
+
+  # Array type
+
+  if n_dim_size:
+
+    for idx, dim_size in enumerate( n_dim_size ):
+      ret = ret.format( '[{{}} for i_{idx} in xrange({dim_size})]'.format(
+        **locals()
+      ) )
+
+  # Vector type
+
+  if isinstance( dtype, Vector ):
+
+    ret = ret.format( direction+'(Bits'+str(nbits)+')' )
 
   # Struct type
 
-  if isinstance( dtype, Struct ):
+  elif isinstance( dtype, Struct ):
 
-    dtype_name = dtype.get_name()
+    ret = ret.format( direction+'('+dtype.get_name()+')' )
 
-    ret = '{direction}({dtype_name})'.format( **locals() )
-
-  else:
-
-    # Array type
-
-    if c_dim_size:
-
-      n_dim_size = dtype.get_dim_sizes()
-
-      for idx, dim_size in enumerate( n_dim_size ):
-        ret = ret.format( '[{{}} for i_{idx} in xrange({dim_size})]'.format(
-          **locals()
-        ) )
-
-      dtype = dtype.get_sub_dtype()
-
-    # Vector type
-
-    if isinstance( dtype, Vector ):
-
-      ret = ret.format( direction+'(Bits'+str(nbits)+')' )
-
-    # Struct type
-
-    elif isinstance( dtype, Struct ):
-
-      ret = ret.format( direction+'('+dtype.get_name()+')' )
-
-    else: assert False
+  else: assert False
 
   ret = 's.' + name + ' = ' + ret
 
@@ -352,6 +317,18 @@ def flatten_packed_dtype( name, dtype ):
 
     return ret
 
+  elif isinstance( dtype, PackedArray ):
+
+    ret = []
+
+    for idx in xrange( dtype.get_dim_sizes()[0] ):
+
+      ret.extend(
+        flatten_packed_dtype( name+'[{}]'.format(idx),
+        dtype.get_next_dim_type() ) )
+
+    return ret
+
   else: assert False
 
 #-------------------------------------------------------------------------
@@ -366,13 +343,14 @@ def read_ffi_model_py( lhs, rhs, name, dtype ):
   elif dtype_length <= 16 : VL_BITWIDTH = 16
   elif dtype_length <= 32 : VL_BITWIDTH = 32
   elif dtype_length <= 64 : VL_BITWIDTH = 64
-  else:              VL_BITWIDTH = 32
+  else:                     VL_BITWIDTH = 32
 
   tplt = '{dtype_name}[{lhs_start}:{lhs_stop}] = ' +\
          'get_bit_slice( {rhs_signal}, {rhs_start}, {rhs_stop} )'
 
   ret = []
 
+  rname = pymtl_name( name )
   vec_list = flatten_packed_dtype( name, dtype )
   vec_list.reverse()
 
@@ -500,7 +478,7 @@ def write_ffi_model_py( lhs, rhs, name, dtype ):
         'int('+cur_vec_list[0][0]+')' )
 
       ret.append(
-        (lhs+'='+rhs_str).format( name = name+'[{}]'.format(lhs_pos) )
+        (lhs+'='+rhs_str).format( name = pymtl_name(name)+'[{}]'.format(lhs_pos) )
       )
 
       lhs_pos += 1
@@ -514,7 +492,7 @@ def write_ffi_model_py( lhs, rhs, name, dtype ):
       'int('+cur_vec_list[0][0]+')' )
 
     ret.append(
-      (lhs+'='+rhs_str).format( name = name+'[{}]'.format(lhs_pos) )
+      (lhs+'='+rhs_str).format(name = pymtl_name(name)+'[{}]'.format(lhs_pos))
     )
 
   return ret
@@ -534,10 +512,11 @@ def generate_seq_upblk_py( ports, ssg ):
       s._ffi_inst.eval( s._ffi_m )"""
 
   seq_in_ports = set()
-  port_objs = {}
+  port_rtypes = {}
+  port_rtypes.update( ports )
   seq_dep_outports = set()
 
-  for port in ports: port_objs[ port._dsl.my_name ] = port
+  # for name, port in ports: port_rtypes[ name ] = port
 
   # C: there is only combinational path from the input to the output
   # S: there is only sequential path from the input to the output
@@ -557,9 +536,10 @@ def generate_seq_upblk_py( ports, ssg ):
   # Generate input assignments and constraints
 
   for in_port in seq_in_ports:
-    name = pymtl_name( in_port )
+    # name = pymtl_name( in_port )
+    name = in_port
 
-    dtype = get_rtlir_type( port_objs[ in_port ] ).get_dtype()
+    dtype = port_rtypes[ in_port ].get_dtype()
 
     set_inputs.extend( write_ffi_model_py(
       's._ffi_m.{name}', 's.{name}', name, dtype
@@ -594,9 +574,10 @@ def generate_comb_upblks_py( ports, ssg ):
       s._ffi_inst.eval( s._ffi_m )"""
 
   comb_ssg = []
-  port_objs = {}
+  port_rtypes = {}
+  port_rtypes.update( ports )
 
-  for port in ports: port_objs[ port._dsl.my_name ] = port
+  # for name, port in ports: port_rtypes[ name ] = port
 
   # C: there is only combinational path from the input to the output
   # S: there is only sequential path from the input to the output
@@ -623,18 +604,14 @@ def generate_comb_upblks_py( ports, ssg ):
     set_inputs = []
 
     for in_port in inports:
-      name = pymtl_name(in_port)
+      # name = pymtl_name(in_port)
+      name = in_port
 
-      dtype = get_rtlir_type( port_objs[ in_port ] ).get_dtype()
+      dtype = port_rtypes[ in_port ].get_dtype()
 
       set_inputs.extend( write_ffi_model_py(
         's._ffi_m.{name}', 's.{name}', name, dtype
       ) )
-
-      # for idx, offset in get_indices( port_objs[ in_port ] ):
-        # set_inputs.append( 's._ffi_m.{name}[{idx}] = s.{name}{offset}'.format(
-          # **locals()
-        # ) )
 
       constraints.append( 'U(comb_eval_{upblk_num}) < WR(s.{name}),'.format(
         **locals()
@@ -642,9 +619,8 @@ def generate_comb_upblks_py( ports, ssg ):
 
     make_indent( set_inputs, 3 )
 
-    constraints.append( 'U(comb_eval_{upblk_num}) < U(readout_{idx}),'.format(
-      **locals()
-    ) )
+    constraints.append(
+      'U(comb_eval_{upblk_num}) < U(readout_{upblk_num}),'.format(**locals()) )
 
     # Fill in the comb upblk template
 
@@ -663,10 +639,11 @@ def generate_comb_upblks_py( ports, ssg ):
 def generate_readout_upblks_py( ports, ssg ):
 
   readout_upblks = []
-  port_objs = {}
+  port_rtypes = {}
+  port_rtypes.update( ports )
   constraints = []
 
-  for port in ports: port_objs[ port._dsl.my_name ] = port
+  # for port in ports: port_rtypes[ port._dsl.my_name ] = port
 
   readout_tplt = """
     @s.update
@@ -677,20 +654,21 @@ def generate_readout_upblks_py( ports, ssg ):
     read_outputs = []
 
     for outport in out:
-      name = pymtl_name( outport )
+      # name = pymtl_name( outport )
+      name = outport
 
-      dtype = get_rtlir_type( port_objs[ outport ] ).get_dtype()
+      dtype = port_rtypes[ outport ].get_dtype()
 
       read_outputs.extend( read_ffi_model_py(
-        's.{name}', 's._ffi_m.{name}', name, dtype
+        's.{name}', 's._ffi_m.{rname}', name, dtype
       ) )
       # for idx, offset in get_indices( port_objs[ outport ] ):
         # read_outputs.append( 's.{name}{offset} = s._ffi_m.{name}[{idx}]'.format(
           # name = pymtl_name(outport), offset = offset, idx = idx
         # ) )
 
-      constraints.append( 'U(readout_{idx}) < RD(s.{name}),'.format(
-        idx = upblk_num, name = pymtl_name(outport)
+      constraints.append( 'U(readout_{upblk_num}) < RD(s.{name}),'.format(
+        **locals()
       ) )
 
     make_indent( read_outputs, 3 )
@@ -712,9 +690,11 @@ def generate_line_trace_py( ports ):
 
   ret = [ 'lt = ""' ]
 
-  for port in ports:
-    my_name = pymtl_name( port._dsl.my_name )
-    full_name = pymtl_name( port._dsl.full_name )
+  for name, port in ports:
+    my_name = name
+    full_name = 's.'+name
+    # my_name = pymtl_name( port._dsl.my_name )
+    # full_name = pymtl_name( port._dsl.full_name )
     ret.append(
       'lt += "{my_name} = {{}}, ".format({full_name})'.format(**locals())
     )
@@ -734,8 +714,9 @@ def generate_internal_line_trace_py( ports ):
 
   ret = [ 'lt = ""' ]
 
-  for port in ports:
-    my_name = pymtl_name( port._dsl.my_name )
+  for name, port in ports:
+    my_name = pymtl_name( name )
+    # my_name = pymtl_name( port._dsl.my_name )
     ret.append(
       'lt += "{my_name} = {{}}, ".format(s._ffi_m.{my_name}[0])'.\
         format(**locals())

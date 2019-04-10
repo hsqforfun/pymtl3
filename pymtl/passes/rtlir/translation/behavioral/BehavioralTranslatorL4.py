@@ -19,15 +19,17 @@ class BehavioralTranslatorL4( BehavioralTranslatorL3 ):
     super( BehavioralTranslatorL4, s ).__init__( top )
 
   #-----------------------------------------------------------------------
-  # gen_behavioral_trans_metadata
+  # _gen_behavioral_trans_metadata
   #-----------------------------------------------------------------------
 
   # Override
-  def gen_behavioral_trans_metadata( s, m ):
+  def _gen_behavioral_trans_metadata( s, m ):
 
     m.apply( BehavioralRTLIRGenL4Pass() )
-    m.apply( BehavioralRTLIRTypeCheckL4Pass( s.behavioral.type_env ) )
+    m.apply( BehavioralRTLIRTypeCheckL4Pass() )
 
     s.behavioral.rtlir[m] = m._pass_behavioral_rtlir_gen.rtlir_upblks
-    s.behavioral.freevars[m] = m._pass_behavioral_rtlir_gen.rtlir_freevars
-    s.behavioral.tmpvars[m] = m._pass_behavioral_rtlir_gen.rtlir_tmpvars
+    s.behavioral.freevars[m] =\
+        m._pass_behavioral_rtlir_type_check.rtlir_freevars
+    s.behavioral.tmpvars[m] =\
+        m._pass_behavioral_rtlir_type_check.rtlir_tmpvars

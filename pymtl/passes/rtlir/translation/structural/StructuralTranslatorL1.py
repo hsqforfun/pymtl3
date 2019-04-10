@@ -13,6 +13,8 @@ from pymtl.passes.utility import *
 from pymtl.passes.rtlir.RTLIRType import *
 from pymtl.passes.rtlir.structural.StructuralRTLIRGenL1Pass\
     import StructuralRTLIRGenL1Pass
+from pymtl.passes.rtlir.structural.StructuralRTLIRSignalExpr\
+    import *
 
 from ..BaseRTLIRTranslator import BaseRTLIRTranslator, TranslatorMetadata
 
@@ -23,25 +25,6 @@ class StructuralTranslatorL1( BaseRTLIRTranslator ):
     super( StructuralTranslatorL1, s ).__init__( top )
 
     s.structural = TranslatorMetadata()
-
-    # Component metadata
-
-    s.structural.component_name  = {}
-    s.structural.component_param = {}
-    s.structural.component_argspec = {}
-
-    # Declarations
-
-    s.structural.decl_type_vector = []
-    s.structural.decl_type_array  = []
-
-    s.structural.decl_ports  = {}
-    s.structural.decl_wires  = {}
-    s.structural.decl_consts = {}
-
-    # Connections
-
-    s.structural.connections = {}
 
     # Generate metadata
 
@@ -63,6 +46,23 @@ class StructuralTranslatorL1( BaseRTLIRTranslator ):
 
   def translate_structural( s, top ):
 
+    # Component metadata
+
+    s.structural.component_unique_name = {}
+
+    # Declarations
+
+    s.structural.decl_type_vector = []
+    s.structural.decl_type_array  = []
+
+    s.structural.decl_ports  = {}
+    s.structural.decl_wires  = {}
+    s.structural.decl_consts = {}
+
+    # Connections
+
+    s.structural.connections = {}
+
     s._translate_structural( top )
 
   #-----------------------------------------------------------------------
@@ -73,10 +73,17 @@ class StructuralTranslatorL1( BaseRTLIRTranslator ):
 
   def _translate_structural( s, m ):
 
-    s.structural.component_name[m] = m.__class__.__name__
-    s.structural.component_param[m] = s.get_component_parameters( m )
-    s.structural.component_argspec[m] = \
-        inspect.getargspec( getattr( m, 'construct' ) )
+    m_rtype = m._pass_structural_rtlir_gen.rtlir_type
+
+    s.structural.component_unique_name[m] =\
+        s.rtlir_tr_component_unique_name(m_rtype)
+
+    # Collect the metadata of the component so we can generate its name
+    # later
+
+    # s.structural.component_name[m] = m_rtype.get_name()
+    # s.structural.component_params[m] = m_rtype.get_params()
+    # s.structural.component_argspec[m] = m_rtype.get_argspec()
 
     # Translate declarations of signals
 
@@ -98,13 +105,21 @@ class StructuralTranslatorL1( BaseRTLIRTranslator ):
 
     port_decls = []
 
-    for port_name, rtype in m_rtype.get_ports():
+    for port_id, rtype in m_rtype.get_ports_packed():
+
+      if isinstance( rtype, Array ):
+        array_type = rtype
+        port_rtype = rtype.get_sub_type()
+      else:
+        array_type = None
+        port_rtype = rtype
 
       port_decls.append(
         s.rtlir_tr_port_decl(
-          s.rtlir_tr_var_name( port_name ),
-          rtype,
-          s.rtlir_data_type_translation( m, rtype.get_dtype() )
+          s.rtlir_tr_var_id( port_id ),
+          port_rtype,
+          s.rtlir_tr_unpacked_array_type( array_type ),
+          s.rtlir_data_type_translation( m, port_rtype.get_dtype() )
       ) )
 
     s.structural.decl_ports[m] = s.rtlir_tr_port_decls( port_decls )
@@ -113,13 +128,21 @@ class StructuralTranslatorL1( BaseRTLIRTranslator ):
 
     wire_decls = []
 
-    for wire_name, rtype in m_rtype.get_wires():
+    for wire_id, rtype in m_rtype.get_wires_packed():
+
+      if isinstance( rtype, Array ):
+        array_type = rtype
+        wire_rtype = rtype.get_sub_type()
+      else:
+        array_type = None
+        wire_rtype = rtype
 
       wire_decls.append(
         s.rtlir_tr_wire_decl(
-          s.rtlir_tr_var_name( wire_name ),
-          rtype,
-          s.rtlir_data_type_translation( m, rtype.get_dtype() )
+          s.rtlir_tr_var_id( wire_id ),
+          wire_rtype,
+          s.rtlir_tr_unpacked_array_type( array_type ),
+          s.rtlir_data_type_translation( m, wire_rtype.get_dtype() )
       ) )
 
     s.structural.decl_wires[m] = s.rtlir_tr_wire_decls( wire_decls )
@@ -128,13 +151,21 @@ class StructuralTranslatorL1( BaseRTLIRTranslator ):
 
     const_decls = []
 
-    for const_name, rtype, instance in m._pass_structural_rtlir_gen.consts:
+    for const_id, rtype, instance in m._pass_structural_rtlir_gen.consts:
+
+      if isinstance( rtype, Array ):
+        array_type = rtype
+        const_rtype = rtype.get_sub_type()
+      else:
+        array_type = None
+        const_rtype = rtype
 
       const_decls.append(
         s.rtlir_tr_const_decl(
-          s.rtlir_tr_var_name( const_name ),
-          rtype,
-          s.rtlir_data_type_translation( m, rtype.get_dtype() ),
+          s.rtlir_tr_var_id( const_id ),
+          const_rtype,
+          s.rtlir_tr_unpacked_array_type( array_type ),
+          s.rtlir_data_type_translation( m, const_rtype.get_dtype() ),
           instance
       ) )
 
@@ -152,32 +183,11 @@ class StructuralTranslatorL1( BaseRTLIRTranslator ):
     for writer, reader in _connections:
 
       connections.append( s.rtlir_tr_connection(
-        s.rtlir_signal_translation( writer, m ),
-        s.rtlir_signal_translation( reader, m )
+        s.rtlir_signal_expr_translation( writer, m ),
+        s.rtlir_signal_expr_translation( reader, m )
       ) )
 
     s.structural.connections[m] = s.rtlir_tr_connections( connections )
-
-  #-----------------------------------------------------------------------
-  # get_model_parameters
-  #-----------------------------------------------------------------------
-
-  def get_component_parameters( s, m ):
-
-    ret = {}
-
-    kwargs = m._dsl.kwargs.copy()
-    if "elaborate" in m._dsl.param_dict:
-      kwargs.update(
-        { x: y\
-          for x, y in m._dsl.param_dict[ "elaborate" ].iteritems() if x 
-      } )
-
-    ret[ '' ] = m._dsl.args
-
-    ret.update( kwargs )
-
-    return ret
 
   #-----------------------------------------------------------------------
   # rtlir_data_type_translation
@@ -197,120 +207,82 @@ class StructuralTranslatorL1( BaseRTLIRTranslator ):
 
       return ret
 
-    elif isinstance( dtype, Array ):
-
-      subtype = dtype.get_sub_dtype()
-
-      assert isinstance( subtype, Vector ),\
-          'Only vector type is supported at L1!'
-
-      ret = s.rtlir_tr_vector_dtype( subtype )
-
-      if reduce( lambda r, x: r and dtype != x[0],
-          s.structural.decl_type_vector, True ):
-
-        s.structural.decl_type_vector.append( ( subtype, ret ) )
-
-      ret = s.rtlir_tr_array_dtype( dtype, ret )
-
-      if reduce( lambda r, x: r and dtype != x[0],
-          s.structural.decl_type_array, True ):
-
-        s.structural.decl_type_array.append( ( dtype, ret ) )
-
-      return ret
-
     else: assert False, "unsupported RTLIR dtype {} at L1!".format( dtype )
 
   #-----------------------------------------------------------------------
-  # rtlir_signal_translation
+  # rtlir_signal_expr_translation
   #-----------------------------------------------------------------------
-  # Translate a PyMTL dsl signal object into its backend representation.
+  # Translate a signal expression in RTLIR into its backend representation.
+  # Only the following operations are supported at L1:
+  # CurComp, CurCompAttr, BitSelection, PartSelection, PortIndex,
+  # WireIndex, ConstIndex
 
-  def rtlir_signal_translation( s, obj, m ):
+  def rtlir_signal_expr_translation( s, expr, m ):
 
-    def is_slicing( signal ):
+    if isinstance( expr, CurComp ):
 
-      if isinstance( signal, pymtl.dsl.Signal ):
+      comp_id, comp_rtype = expr.get_component_id(), expr.get_rtype()
+      return s.rtlir_tr_current_comp( comp_id, comp_rtype )
 
-        Slice = signal._dsl.slice
+    elif isinstance( expr, CurCompAttr ):
 
-        if Slice is None: return False
+      return s.rtlir_tr_current_comp_attr(
+        s.rtlir_signal_expr_translation( expr.get_base(), m ),
+        expr.get_attr() )
 
-        assert Slice.start != None and Slice.stop != None,\
-            'the start and stop of a slice cannot be None!'
+    elif isinstance( expr, PortIndex ):
 
-        return True
+      return s.rtlir_tr_port_array_index(
+        s.rtlir_signal_expr_translation( expr.get_base(), m ),
+        expr.get_index() )
 
-      else: return False
+    elif isinstance( expr, WireIndex ):
 
-    # L1: obj must be a signal that belongs to the current component. No
-    # subcomponent is allowed at this level.
-    # `obj` here should be a PyMTL Connectable instance
+      return s.rtlir_tr_wire_array_index(
+        s.rtlir_signal_expr_translation( expr.get_base(), m ),
+        expr.get_index() )
 
-    # Signal ( Port, Wire ) connectable
+    elif isinstance( expr, ConstIndex ):
 
-    if isinstance( obj, pymtl.dsl.Signal ):
+      return s.rtlir_tr_const_array_index(
+        s.rtlir_signal_expr_translation( expr.get_base(), m ),
+        expr.get_index() )
 
-      Slice = obj._dsl.slice
+    elif isinstance( expr, BitSelection ):
 
-      # Bit selection or part selection
-
-      if is_slicing( obj ):
-
-        if is_slicing( obj._dsl.parent_obj ):
-
-          assert False,\
-            'slicing {} over sliced signal {} is not allowed!'.format(
-                Slice, obj._dsl.parent_obj
-            )
-
-        if Slice.stop == Slice.start + 1:
-
-          return s.rtlir_tr_bit_selection(
-            s.rtlir_signal_translation( obj._dsl.parent_obj, m ),
-            Slice.start
-          )
-
-        else:
-
-          return s.rtlir_tr_part_selection(
-            s.rtlir_signal_translation( obj._dsl.parent_obj, m ),
-            Slice.start, Slice.stop, Slice.step
-          )
-
-      # Use the signal itself
-
-      elif ( 'level' in obj._dsl.__dict__ ):
-
-        m_level = m._dsl.level
-        obj_level = obj._dsl.level
-
-        assert obj_level == (m_level+1),\
-"Only attributes of the current component under translation are allowed at L1!"
-
-        return s.rtlir_tr_var_name( obj._dsl.my_name )
-
-      # No other signal oeprations are supported
-
-      else:
-
+      base = expr.get_base()
+      if isinstance( base, (PartSelection, BitSelection) ):
         assert False,\
-          'signal {} cannot be translated at L1!'.format( obj )
+          'bit selection {} over bit/part selection {} is not allowed!'.format(
+              expr, base )
 
-    # Const connectable
+      return s.rtlir_tr_bit_selection(
+        s.rtlir_signal_expr_translation( expr.get_base(), m ),
+        expr.get_index() )
+      
+    elif isinstance( expr, PartSelection ):
 
-    elif isinstance( obj, pymtl.dsl.Const ):
+      base = expr.get_base()
+      if isinstance( base, (PartSelection, BitSelection) ):
+        assert False,\
+          'part selection {} over bit/part selection {} is not allowed!'.format(
+              expr, base )
 
-      assert is_BitsX( obj._dsl.Type ), 'only vector type is supported at L1!'
+      start, stop = expr.get_slice()[0], expr.get_slice()[1]
+      return s.rtlir_tr_part_selection(
+        s.rtlir_signal_expr_translation( expr.get_base(), m ),
+        start, stop )
 
-      return s.rtlir_tr_literal_number(
-        obj._dsl.const, obj._dsl.Type.nbits
-      )
+    elif isinstance( expr, ConstInstance ):
 
-    # Other connectables are not supported at L1
+      dtype = expr.get_rtype().get_dtype()
+      assert isinstance( dtype, Vector ),\
+          '{} is not supported at L1!'.format( dtype )
+      return s.rtlir_tr_literal_number( dtype.get_length(), expr.get_value() )
 
-    else: assert False, '{} connectable is not supported at L1!'.format( obj )
+    # Other operations are not supported at L1
+
+    else: assert False, '{} is not supported at L1!'.format( expr )
 
   #-----------------------------------------------------------------------
   # Methods to be implemented by the backend translator
@@ -321,7 +293,7 @@ class StructuralTranslatorL1( BaseRTLIRTranslator ):
   def rtlir_tr_vector_dtype( s, Type ):
     raise NotImplementedError()
 
-  def rtlir_tr_array_dtype( s, Type, subtype ):
+  def rtlir_tr_unpacked_array_type( s, Type ):
     raise NotImplementedError()
 
   # Declarations
@@ -329,19 +301,19 @@ class StructuralTranslatorL1( BaseRTLIRTranslator ):
   def rtlir_tr_port_decls( s, port_decls ):
     raise NotImplementedError()
 
-  def rtlir_tr_port_decl( s, name, Type, dtype ):
+  def rtlir_tr_port_decl( s, id_, Type, array_type, dtype ):
     raise NotImplementedError()
 
   def rtlir_tr_wire_decls( s, wire_decls ):
     raise NotImplementedError()
 
-  def rtlir_tr_wire_decl( s, name, Type, dtype ):
+  def rtlir_tr_wire_decl( s, id_, Type, array_type, dtype ):
     raise NotImplementedError()
 
   def rtlir_tr_const_decls( s, const_decls ):
     raise NotImplementedError()
 
-  def rtlir_tr_const_decl( s, name, Type, dtype, value ):
+  def rtlir_tr_const_decl( s, id_, Type, array_type, dtype, value ):
     raise NotImplementedError()
 
   # Connections
@@ -357,13 +329,31 @@ class StructuralTranslatorL1( BaseRTLIRTranslator ):
   def rtlir_tr_bit_selection( s, base_signal, index ):
     raise NotImplementedError()
 
-  def rtlir_tr_part_selection( s, base_signal, start, stop, step ):
+  def rtlir_tr_part_selection( s, base_signal, start, stop ):
+    raise NotImplementedError()
+
+  def rtlir_tr_port_array_index( s, base_signal, index ):
+    raise NotImplementedError()
+
+  def rtlir_tr_wire_array_index( s, base_signal, index ):
+    raise NotImplementedError()
+
+  def rtlir_tr_const_array_index( s, base_signal, index ):
+    raise NotImplementedError()
+
+  def rtlir_tr_current_comp_attr( s, base_signal, attr ):
+    raise NotImplementedError()
+
+  def rtlir_tr_current_comp( s, comp_id, comp_rtype ):
     raise NotImplementedError()
 
   # Miscs
 
-  def rtlir_tr_var_name( s, var_name ):
+  def rtlir_tr_var_id( s, var_id ):
     raise NotImplementedError()
 
-  def rtlir_tr_literal_number( s, value, nbits ):
+  def rtlir_tr_literal_number( s, nbits, value ):
+    raise NotImplementedError()
+
+  def rtlir_tr_component_unique_name( s, c_rtype ):
     raise NotImplementedError()

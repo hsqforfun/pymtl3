@@ -35,21 +35,10 @@ def local_do_test( m ):
     mk_TranslationPass, mk_SVRTLIRTranslator, 1, 0
   )
 
-  # Mangle the names of ports because the import pass might have done the
-  # same
-
-  _input_data, _outport_types, _output_val = {}, {}, {}
-  for name, value in m._input_data.iteritems():
-    _input_data[ pymtl_name( name ) ] = value
-  for name, value in m._outport_types.iteritems():
-    _outport_types[ pymtl_name( name ) ] = value
-  for name, value in output_val.iteritems():
-    _output_val[ pymtl_name( name ) ] = value
-
   # Verfiy the imported model against the reference output
 
   run_sim_reference_test(
-    m_copy, _input_data, _outport_types, _output_val,
+    m_copy, m._input_data, m._outport_types, output_val,
     translation_pass, SimpleImportPass
   )
 
@@ -244,7 +233,7 @@ def test_port_connection5( do_test ):
 
 def test_port_connection6( do_test ):
   # Verilator does not allow bit indexing/slicing on a single bit
-  # Extra bit slicings will be eliminated by translation framework
+  # Translation framework will throw an exception
 
   class TestComponent( RTLComponent ):
     
@@ -274,11 +263,11 @@ def test_port_connection6( do_test ):
       'out0[1][0][1]': Bits1,
   }
 
-  do_test( m )
+  with expected_failure( AssertionError ):
+    do_test( m )
 
 def test_port_connection7( do_test ):
   # Verilator does not allow bit indexing/slicing on a single bit
-  # Extra bit slicings will be eliminated by translation framework
 
   class TestComponent( RTLComponent ):
     
@@ -407,4 +396,5 @@ def test_port_connection7( do_test ):
       'out2[0][0][2][5]': Bits86
   }
 
-  do_test( m )
+  with expected_failure( AssertionError ):
+    do_test( m )

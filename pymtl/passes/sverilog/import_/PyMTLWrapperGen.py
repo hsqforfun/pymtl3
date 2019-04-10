@@ -19,7 +19,8 @@ from helpers              import *
 #-----------------------------------------------------------------------
 # The function that generates PyMTL wrapper.
 
-def generate_py_wrapper( interface, ports, top_name, lib_file, port_cdefs, ssg_name ):
+def generate_py_wrapper(
+    ports, unpacked_ports, top_name, lib_file, port_cdefs, ssg_name ):
     
     template_name =\
       os.path.dirname( os.path.abspath( __file__ ) ) +\
@@ -33,7 +34,7 @@ def generate_py_wrapper( interface, ports, top_name, lib_file, port_cdefs, ssg_n
     # Port definition in PyMTL style
     port_defs = []
 
-    for name, port in interface:
+    for name, port in ports:
       port_defs.append( generate_signal_decl_py( name, port ) )
 
     make_indent( port_defs, 2 )
@@ -41,23 +42,24 @@ def generate_py_wrapper( interface, ports, top_name, lib_file, port_cdefs, ssg_n
     # Load the sensitivity group from .ssg file
     ssg = load_ssg( ssg_name )
 
-    if ssg is None: ssg = generate_default_ssg( ports )
+    if ssg is None: ssg = generate_default_ssg( unpacked_ports )
 
     constraints = []
 
     # Sequential upblks
-    seq_upblk, _constraints = generate_seq_upblk_py( ports, ssg )
+    seq_upblk, _constraints = generate_seq_upblk_py( unpacked_ports, ssg )
 
     constraints += _constraints
 
     # Combinational upblks
-    comb_upblks, _constraints = generate_comb_upblks_py( ports, ssg )
+    comb_upblks, _constraints = generate_comb_upblks_py( unpacked_ports, ssg )
 
     constraints += _constraints
 
     # Read-out combinational upblks
 
-    readout_upblks, _constraints = generate_readout_upblks_py( ports, ssg )
+    readout_upblks, _constraints =\
+        generate_readout_upblks_py( unpacked_ports, ssg )
 
     constraints += _constraints
 
@@ -77,10 +79,10 @@ def generate_py_wrapper( interface, ports, top_name, lib_file, port_cdefs, ssg_n
       )
 
     # Line trace 
-    line_trace = generate_line_trace_py( ports )
+    line_trace = generate_line_trace_py( unpacked_ports )
 
     # Internal line trace 
-    in_line_trace = generate_internal_line_trace_py( ports )
+    in_line_trace = generate_internal_line_trace_py( unpacked_ports )
 
     # Fill in the python wrapper template
     with open( template_name, 'r' ) as template:

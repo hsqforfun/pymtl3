@@ -13,20 +13,14 @@ from pymtl.passes.rtlir.translation.behavioral.BehavioralTranslatorL2\
     import BehavioralTranslatorL2
 from pymtl.passes.rtlir.behavioral.BehavioralRTLIR import *
 
-from SVBehavioralTranslatorL1 import BehavioralRTLIRToSVVisitorL1
+from SVBehavioralTranslatorL1 import BehavioralRTLIRToSVVisitorL1,\
+                                     SVBehavioralTranslatorL1
 
-class SVBehavioralTranslatorL2( BehavioralTranslatorL2 ):
+class SVBehavioralTranslatorL2(
+    SVBehavioralTranslatorL1, BehavioralTranslatorL2 ):
 
-  def rtlir_tr_upblk_decls( s, upblk_srcs ):
-    ret = ''
-    for upblk_src in upblk_srcs:
-      make_indent( upblk_src, 1 )
-      ret += '\n' + '\n'.join( upblk_src )
-    return ret
-
-  def rtlir_tr_upblk_decl( s, m, upblk, rtlir_upblk ):
-    visitor = BehavioralRTLIRToSVVisitorL2( m )
-    return visitor.enter( upblk, rtlir_upblk )
+  def _get_rtlir2sv_visitor( s ):
+    return BehavioralRTLIRToSVVisitorL2
 
 #-------------------------------------------------------------------------
 # BehavioralRTLIRToSVVisitorL2
@@ -35,9 +29,9 @@ class SVBehavioralTranslatorL2( BehavioralTranslatorL2 ):
 
 class BehavioralRTLIRToSVVisitorL2( BehavioralRTLIRToSVVisitorL1 ):
 
-  def __init__( s, component ):
+  def __init__( s ):
 
-    super( BehavioralRTLIRToSVVisitorL2, s ).__init__( component )
+    super( BehavioralRTLIRToSVVisitorL2, s ).__init__()
 
     # The dictionary of operator-character pairs
     s.ops = {
@@ -259,8 +253,8 @@ class BehavioralRTLIRToSVVisitorL2( BehavioralRTLIRToSVVisitorL1 ):
   # visit_FreeVar
   #-----------------------------------------------------------------------
 
-  def visit_FreeVar( s, node ):
-    return node.name
+  # def visit_FreeVar( s, node ):
+    # return node.name
 
   #-----------------------------------------------------------------------
   # visit_TmpVar

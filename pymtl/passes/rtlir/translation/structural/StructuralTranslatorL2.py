@@ -13,19 +13,12 @@ from pymtl.passes.utility import *
 from pymtl.passes.rtlir.RTLIRType import *
 from pymtl.passes.rtlir.structural.StructuralRTLIRGenL2Pass\
     import StructuralRTLIRGenL2Pass
+from pymtl.passes.rtlir.structural.StructuralRTLIRSignalExpr\
+    import *
 
-from ..BaseRTLIRTranslator import BaseRTLIRTranslator, TranslatorMetadata
 from StructuralTranslatorL1 import StructuralTranslatorL1
 
 class StructuralTranslatorL2( StructuralTranslatorL1 ):
-
-  def __init__( s, top ):
-
-    super( StructuralTranslatorL2, s ).__init__( top )
-
-    # Declarations
-
-    s.structural.decl_type_struct = []
 
   #-----------------------------------------------------------------------
   # gen_structural_trans_metadata
@@ -35,6 +28,18 @@ class StructuralTranslatorL2( StructuralTranslatorL1 ):
   def gen_structural_trans_metadata( s, top ):
 
     top.apply( StructuralRTLIRGenL2Pass() )
+
+  #-----------------------------------------------------------------------
+  # translate_structural
+  #-----------------------------------------------------------------------
+
+  # Override
+  def translate_structural( s, top ):
+
+    # Declarations
+
+    s.structural.decl_type_struct = []
+    super( StructuralTranslatorL2, s ).translate_structural( top )
 
   #-----------------------------------------------------------------------
   # _translate_structural
@@ -79,62 +84,31 @@ class StructuralTranslatorL2( StructuralTranslatorL1 ):
           rtlir_data_type_translation( m, dtype )
 
   #-----------------------------------------------------------------------
-  # rtlir_signal_translation
+  # rtlir_signal_expr_translation
   #-----------------------------------------------------------------------
-  # Translate a PyMTL dsl signal object into its backend representation.
+  # Translate a signal expression in RTLIR into its backend representation.
+  # Add support for the following operations at L2:
+  # PackedIndex, StructAttr
 
   # Override
-  def rtlir_signal_translation( s, obj, m ):
+  def rtlir_signal_expr_translation( s, expr, m ):
 
-    def is_struct_attribute( signal ):
+    if isinstance( expr, PackedIndex ):
 
-      if isinstance( signal._dsl.parent_obj, pymtl.dsl.Signal ) and\
-         hasattr( signal._dsl.parent_obj._dsl, 'attrs' ) and\
-         signal._dsl.my_name in signal._dsl.parent_obj._dsl.attrs:
+      return s.rtlir_tr_packed_index(
+        s.rtlir_signal_expr_translation( expr.get_base(), m ),
+        expr.get_index() )
 
-        ptype = signal._dsl.parent_obj._dsl.Type
+    elif isinstance( expr, StructAttr ):
 
-        return not is_BitsX( ptype ) and\
-               not type( ptype ).__name__ in dir( __builtins__ )
-
-      else: return False
-
-    # L2: obj must be a signal that belongs to the current component. No
-    # subcomponent is allowed at this level.
-    # `obj` here should be a PyMTL Connectable instance
-
-    # Signal ( Port, Wire ) connectable
-
-    if isinstance( obj, pymtl.dsl.Signal ):
-
-      # struct attribute access
-
-      if is_struct_attribute( obj ):
-
-        return s.rtlir_tr_struct_attr(
-          s.rtlir_signal_translation( obj._dsl.parent_obj, m ),
-          obj._dsl.my_name
-        )
-
-      else:
-
-        return super( StructuralTranslatorL2, s ).\
-            rtlir_signal_translation( obj, m )
-
-    # Const connectable
-
-    elif isinstance( obj, pymtl.dsl.Const ):
-
-      assert is_BitsX( obj._dsl.Type ),\
-        'translating struct const {} is not supported!'.format( obj )
-
-      return super( StructuralTranslatorL2, s ).\
-          rtlir_signal_translation( obj, m )
+      return s.rtlir_tr_struct_attr(
+        s.rtlir_signal_expr_translation( expr.get_base(), m ),
+        expr.get_attr() )
 
     else:
       
       return super( StructuralTranslatorL2, s ).\
-          rtlir_signal_translation( obj, m )
+          rtlir_signal_expr_translation( expr, m )
 
   #-----------------------------------------------------------------------
   # Methods to be implemented by the backend translator
@@ -146,6 +120,9 @@ class StructuralTranslatorL2( StructuralTranslatorL1 ):
     raise NotImplementedError()
 
   # Signal operations
+
+  def rtlir_tr_packed_index( s, base_signal, index ):
+    raise NotImplementedError()
   
   def rtlir_tr_struct_attr( s, base_signal, attr ):
     raise NotImplementedError()

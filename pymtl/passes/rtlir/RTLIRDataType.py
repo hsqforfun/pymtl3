@@ -11,6 +11,7 @@
 import inspect, pymtl, __builtin__
 
 from pymtl.dsl.Connectable import Signal as pymtl_Signal
+from pymtl.dsl.Connectable import Const as pymtl_Const
 from pymtl.passes.utility import *
 
 #-------------------------------------------------------------------------
@@ -157,18 +158,19 @@ class Bool( BaseRTLIRDataType ):
     return 'Bool'
 
 #-------------------------------------------------------------------------
-# Array
+# PackedArray
 #-------------------------------------------------------------------------
 
-class Array( BaseRTLIRDataType ):
+class PackedArray( BaseRTLIRDataType ):
 
   def __init__( s, dim_sizes, sub_dtype ):
 
-    assert not isinstance( sub_dtype, Array )
+    assert isinstance( sub_dtype, BaseRTLIRDataType )
+    assert not isinstance( sub_dtype, PackedArray )
     assert len( dim_sizes ) >= 1
     assert reduce( lambda s, i: s+i, dim_sizes, 0 ) > 0
 
-    super( Array, s ).__init__()
+    super( PackedArray, s ).__init__()
     s.dim_sizes = dim_sizes
     s.sub_dtype = sub_dtype
 
@@ -198,7 +200,7 @@ class Array( BaseRTLIRDataType ):
 
       return s.sub_dtype
 
-    return Array( s.dim_sizes[1:], s.sub_dtype )
+    return PackedArray( s.dim_sizes[1:], s.sub_dtype )
 
   def get_dim_sizes( s ):
 
@@ -215,7 +217,7 @@ class Array( BaseRTLIRDataType ):
 
   def __str__( s ):
 
-    return 'Array'
+    return 'PackedArray'
 
 #-------------------------------------------------------------------------
 # get_rtlir_dtype
@@ -224,30 +226,12 @@ class Array( BaseRTLIRDataType ):
 def get_rtlir_dtype( obj ):
   """return the RTLIR data type of obj"""
 
-  # Array data type
-
-  if isinstance( obj, list ):
-
-    assert len( obj ) > 0
-
-    ref_type = get_rtlir_dtype( obj[0] )
-    assert\
-      reduce(lambda res,i: res and (get_rtlir_dtype(i) == ref_type),obj),\
-      'all elements of an array must have the same type!'
-
-    dim_sizes = []
-
-    while isinstance( obj, list ):
-
-      assert len( obj ) > 0
-      dim_sizes.append( len( obj ) )
-      obj = obj[0]
-
-    return Array( dim_sizes, get_rtlir_dtype( obj ) )
+  assert not isinstance( obj, list ),\
+      'internal error: non-struct field array object {} met!'.format( obj )
 
   # Signals might be parameterized with different data types
 
-  elif isinstance( obj, pymtl_Signal ):
+  if isinstance( obj, ( pymtl_Signal, pymtl_Const ) ):
 
     Type = obj._dsl.Type
     
@@ -296,6 +280,26 @@ def get_rtlir_dtype_struct( obj ):
 
     return Vector( obj.nbits )
 
+  # PackedArray field
+
+  elif isinstance( obj, list ):
+
+    assert len( obj ) > 0
+    ref_type = get_rtlir_dtype_struct( obj[0] )
+    assert\
+      reduce(lambda res,i:res and (get_rtlir_dtype_struct(i)==ref_type),obj),\
+      'all elements of array {} must have the same type {}!'.format(
+          obj, ref_type )
+    dim_sizes = []
+
+    while isinstance( obj, list ):
+
+      assert len( obj ) > 0
+      dim_sizes.append( len( obj ) )
+      obj = obj[0]
+
+    return PackedArray( dim_sizes, get_rtlir_dtype_struct( obj ) )
+
   # Struct field
 
   elif hasattr( obj, '__name__' ) and not obj.__name__ in dir( __builtin__ ):
@@ -320,7 +324,7 @@ def get_rtlir_dtype_struct( obj ):
 
     except: raise
 
-    fields = collect_objs( type_instance, object, True )
+    fields = collect_objs( type_instance, object, grouped = True )
 
     for name, field in fields:
 

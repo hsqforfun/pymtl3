@@ -11,6 +11,7 @@ from pymtl.passes.rtlir.behavioral.BehavioralRTLIRGenL1Pass\
     import BehavioralRTLIRGenL1Pass
 from pymtl.passes.rtlir.behavioral.BehavioralRTLIRTypeCheckL1Pass\
     import BehavioralRTLIRTypeCheckL1Pass
+from pymtl.passes.rtlir.RTLIRType import *
 
 from BehavioralTranslatorL0 import BehavioralTranslatorL0
 
@@ -20,17 +21,26 @@ class BehavioralTranslatorL1( BehavioralTranslatorL0 ):
 
     super( BehavioralTranslatorL1, s ).__init__( top )
 
-    s.behavioral.rtlir = {}
-    s.behavioral.freevars = {}
-    s.behavioral.upblk_srcs = {}
-
     s.gen_behavioral_trans_metadata( top )
 
   #-----------------------------------------------------------------------
   # gen_behavioral_trans_metadata
   #-----------------------------------------------------------------------
 
-  def gen_behavioral_trans_metadata( s, m ):
+  def gen_behavioral_trans_metadata( s, top ):
+
+    s.behavioral.rtlir = {}
+    s.behavioral.freevars = {}
+    s.behavioral.upblk_srcs = {}
+    s.behavioral.decl_freevars = {}
+
+    s._gen_behavioral_trans_metadata( top )
+
+  #-----------------------------------------------------------------------
+  # _gen_behavioral_trans_metadata
+  #-----------------------------------------------------------------------
+
+  def _gen_behavioral_trans_metadata( s, m ):
 
     m.apply( BehavioralRTLIRGenL1Pass() )
     m.apply( BehavioralRTLIRTypeCheckL1Pass() )
@@ -39,29 +49,6 @@ class BehavioralTranslatorL1( BehavioralTranslatorL0 ):
         m._pass_behavioral_rtlir_gen.rtlir_upblks
     s.behavioral.freevars[m] =\
         m._pass_behavioral_rtlir_type_check.rtlir_freevars
-
-  #-----------------------------------------------------------------------
-  # gen_type_env
-  #-----------------------------------------------------------------------
-  # L1 assumes only the top component is in the component hierarchy.
-
-  # def gen_type_env( s, top ):
-
-    # def collect_type_env( m, type_env ):
-
-      # m_type = get_rtlir_type( m )
-
-      # type_env[ m ]
-
-      # for name, rtype in m.get_all_properties():
-
-        # type_env[ name ] = rtype
-
-    # ret = {}
-
-    # collect_type_env( top, ret )
-
-    # return ret
 
   #-----------------------------------------------------------------------
   # translate_behavioral
@@ -83,10 +70,38 @@ class BehavioralTranslatorL1( BehavioralTranslatorL0 ):
       for blk in upblks[ upblk_type ]:
 
         upblk_srcs.append( s.rtlir_tr_upblk_decl(
-          m, blk, s.behavioral.rtlir[ m ][ blk ]
+          blk, s.behavioral.rtlir[ m ][ blk ]
         ) )
 
     s.behavioral.upblk_srcs[m] = s.rtlir_tr_upblk_decls( upblk_srcs )
+
+    # Generate free variable declarations
+
+    freevars = []
+
+    for name, fvar in s.behavioral.freevars[m].iteritems():
+
+      rtype = get_rtlir_type( fvar )
+      if isinstance( rtype, Array ):
+        fvar_rtype = rtype.get_sub_type()
+        array_rtype = rtype
+      else:
+        fvar_rtype = rtype
+        array_rtype = None
+
+      dtype = fvar_rtype.get_dtype()
+      assert isinstance( dtype, Vector ),\
+      '{} freevar should be an integer or a list of integers!'.format( name )
+
+      freevars.append( s.rtlir_tr_behavioral_freevar(
+        name,
+        fvar_rtype,
+        s.rtlir_tr_unpacked_array_type( array_rtype ),
+        s.rtlir_tr_vector_dtype( dtype ),
+        fvar
+      ) )
+
+    s.behavioral.decl_freevars[m] = s.rtlir_tr_behavioral_freevars(freevars)
 
   #-----------------------------------------------------------------------
   # Methods to be implemented by the backend translator
@@ -95,5 +110,11 @@ class BehavioralTranslatorL1( BehavioralTranslatorL0 ):
   def rtlir_tr_upblk_decls( s, upblk_srcs ):
     raise NotImplementedError()
 
-  def rtlir_tr_upblk_decl( s, m, upblk, rtlir_upblk ):
+  def rtlir_tr_upblk_decl( s, upblk, rtlir_upblk ):
+    raise NotImplementedError()
+
+  def rtlir_tr_behavioral_freevars( s, freevars ):
+    raise NotImplementedError()
+
+  def rtlir_tr_behavioral_freevar( s, id_, rtype, array_type, dtype, obj ):
     raise NotImplementedError()

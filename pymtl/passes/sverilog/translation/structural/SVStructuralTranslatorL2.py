@@ -20,7 +20,7 @@ class SVStructuralTranslatorL2(
 
     field_decls = []
 
-    for name, rtype in Type.get_all_properties():
+    for id_, rtype in Type.get_all_properties():
 
       if isinstance( rtype, Vector ):
 
@@ -31,13 +31,11 @@ class SVStructuralTranslatorL2(
         decl = s.rtlir_tr_array_dtype( rtype )['decl'].format(**locals())
 
       elif isinstance( rtype, Struct ):
-        
+
         decl = s.rtlir_tr_struct_dtype( rtype )['decl'].format(**locals())
 
       else: assert False,\
-        'unrecoganized field type {} of struct {}!'.format(
-            rtype, dtype_name
-          )
+        'unrecoganized field type {} of struct {}!'.format( rtype, dtype_name )
 
       field_decls.append( decl + ';' )
 
@@ -50,10 +48,13 @@ class SVStructuralTranslatorL2(
         'typedef struct packed {{\n{field_decl}\n}} {dtype_name};\n'.format(
           **locals()
         ),
-      'decl' : '{dtype_name} {{name}}'.format( **locals() )
+      'decl' : '{dtype_name} {{id_}}'.format( **locals() )
     }
 
   # Signal oeprations
+
+  def rtlir_tr_packed_index( s, base_signal, index ):
+    return '{base_signal}[{index}]'.format( **locals() )
 
   def rtlir_tr_struct_attr( s, base_signal, attr ):
     return '{base_signal}.{attr}'.format( **locals() )

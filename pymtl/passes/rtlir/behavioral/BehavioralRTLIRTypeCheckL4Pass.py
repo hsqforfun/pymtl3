@@ -18,9 +18,6 @@ from errors             import PyMTLTypeError
 
 class BehavioralRTLIRTypeCheckL4Pass( BasePass ):
 
-  def __init__( s, type_env ):
-    s.type_env = type_env
-
   def __call__( s, m ):
     """perform type checking on all RTLIR in rtlir_upblks"""
 
@@ -31,7 +28,7 @@ class BehavioralRTLIRTypeCheckL4Pass( BasePass ):
     m._pass_behavioral_rtlir_type_check.rtlir_tmpvars = {}
 
     visitor = BehavioralRTLIRTypeCheckVisitorL4(
-      m, s.type_env,
+      m,
       m._pass_behavioral_rtlir_type_check.rtlir_freevars,
       m._pass_behavioral_rtlir_type_check.rtlir_tmpvars
     )
@@ -46,15 +43,36 @@ class BehavioralRTLIRTypeCheckL4Pass( BasePass ):
 
 class BehavioralRTLIRTypeCheckVisitorL4( BehavioralRTLIRTypeCheckVisitorL3 ):
 
-  def __init__( s, component, type_env, freevars, tmpvars ):
+  def __init__( s, component, freevars, tmpvars ):
 
     super( BehavioralRTLIRTypeCheckVisitorL4, s ).\
-        __init__( component, type_env, freevars, tmpvars )
+        __init__( component, freevars, tmpvars )
 
     s.type_expect[ 'Attribute' ] = {
-      'value':( (Module, Struct, Interface),
+      'value':( (Component, Signal, InterfaceView),
         'the base of an attribute must be one of: module, struct, interface!' )
     }
+
+  #-------------------------------------------------------------------------
+  # visit_Attribute
+  #-------------------------------------------------------------------------
+
+  def visit_Attribute( s, node ):
+
+    if isinstance( node.value.Type, InterfaceView ):
+
+      if not node.value.Type.has_property( node.attr ):
+        raise PyMTLTypeError(
+          s.blk, node.ast, '{} does not have field {}!'.format(
+            dtype.get_name(), node.attr
+          )
+        )
+
+      node.Type = node.value.Type.get_property( node.attr )
+
+    else:
+
+      super( BehavioralRTLIRTypeCheckVisitorL4, s ).visit_Attribute( node )
 
   #-----------------------------------------------------------------------
   # visit_Index
@@ -62,15 +80,13 @@ class BehavioralRTLIRTypeCheckVisitorL4( BehavioralRTLIRTypeCheckVisitorL3 ):
 
   def visit_Index( s, node ):
 
-    if isinstance( node.value.Type, Interface ):
+    if isinstance( node.value.Type, Array ) and\
+       isinstance( node.value.Type.get_sub_type(), InterfaceView ):
 
-      if not isinstance( node.idx.Type, Const ) or not node.idx.Type.is_static:
-
+      if not hasattr( node.idx._value ):
         raise PyMTLTypeError(
           s.blk, node.ast,
           'index of interface array must be a static constant expression!'
         )
 
-    else:
-
-      super( BehavioralRTLIRTypeCheckVisitorL4, s ).visit_Index( node )
+    super( BehavioralRTLIRTypeCheckVisitorL4, s ).visit_Index( node )

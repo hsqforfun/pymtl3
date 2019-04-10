@@ -23,11 +23,23 @@ class BehavioralTranslatorL2( BehavioralTranslatorL1 ):
   #-----------------------------------------------------------------------
 
   # Override
-  def gen_behavioral_trans_metadata( s, m ):
+  def gen_behavioral_trans_metadata( s, top ):
+
+    s.behavioral.tmpvars = {}
+    super( BehavioralTranslatorL2, s ).gen_behavioral_trans_metadata( top )
+
+  #-----------------------------------------------------------------------
+  # _gen_behavioral_trans_metadata
+  #-----------------------------------------------------------------------
+
+  # Override
+  def _gen_behavioral_trans_metadata( s, m ):
 
     m.apply( BehavioralRTLIRGenL2Pass() )
-    m.apply( BehavioralRTLIRTypeCheckL2Pass( s.behavioral.type_env ) )
+    m.apply( BehavioralRTLIRTypeCheckL2Pass() )
 
     s.behavioral.rtlir[m] = m._pass_behavioral_rtlir_gen.rtlir_upblks
-    s.behavioral.freevars[m] = m._pass_behavioral_rtlir_gen.rtlir_freevars
-    s.behavioral.tmpvars[m] = m._pass_behavioral_rtlir_gen.rtlir_tmpvars
+    s.behavioral.freevars[m] =\
+        m._pass_behavioral_rtlir_type_check.rtlir_freevars
+    s.behavioral.tmpvars[m] =\
+        m._pass_behavioral_rtlir_type_check.rtlir_tmpvars

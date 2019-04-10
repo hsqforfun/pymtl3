@@ -69,15 +69,16 @@ def mk_SVRTLIRTranslator( _RTLIRTranslator, b_level, s_level ):
       template =\
 """
 module {module_name}
-# (
-{const_decls}
-)
 (
 {port_decls}
 {ifc_decls}
 );
+{const_decls}
+{behavioral_fvars}
 
 {wire_decls}
+
+{subcomp_decls}
 
 {upblk_srcs}
 
@@ -85,11 +86,7 @@ module {module_name}
 
 endmodule
 """
-
-      comp_name = getattr( structural, 'component_name', '' )
-      comp_param = getattr( structural, 'component_param', None )
-      comp_argspec = getattr( structural, 'component_argspec', None )
-      module_name = s.gen_module_name( comp_name, comp_param, comp_argspec )
+      module_name = getattr( structural, 'component_unique_name', '' )
 
       port_decls = getattr( structural, 'decl_ports', '' )
       ifc_decls = getattr( structural, 'decl_ifcs', '' )
@@ -97,46 +94,14 @@ endmodule
 
       wire_decls = getattr( structural, 'decl_wires', '' )
       const_decls = getattr( structural, 'decl_consts', '' )
-      connections = getattr( structural, 'connections', '' )
+      subcomp_decls = getattr( structural, 'decl_subcomps', '' )
       upblk_srcs = getattr( behavioral, 'upblk_srcs', '' )
+      behavioral_fvars = getattr( behavioral, 'decl_freevars', '' )
+      connections = getattr( structural, 'connections', '' )
 
       s._top_module_name = module_name
 
       return template.format( **locals() )
-
-    #-----------------------------------------------------------------------
-    # gen_module_name
-    #-----------------------------------------------------------------------
-
-    def gen_module_name( s, comp_name, comp_param, comp_argspec ):
-
-      assert comp_name and comp_param
-
-      # Add const args to module name
-
-      for idx, arg_name in enumerate( comp_argspec.args[1:] ):
-
-        arg_value = comp_param[ '' ][idx]
-        comp_name += '__' + arg_name + '_' + get_string(arg_value)
-
-      # Add varargs to module name
-
-      if len( comp_param[''] ) > len( comp_argspec.args[1:] ):
-
-        comp_name += '__' + comp_argspec.varargs
-      
-      for arg_value in comp_param[''][ len(comp_argspec.args[1:]): ]:
-
-        comp_name += '___' + get_string(arg_value)
-
-      # Add kwargs to module name
-
-      for arg_name, arg_value in comp_param.iteritems():
-
-        if arg_name == '': continue
-        comp_name += '__' + arg_name + '_' + get_string(arg_value)
-
-      return comp_name
 
   return _SVRTLIRTranslator
 

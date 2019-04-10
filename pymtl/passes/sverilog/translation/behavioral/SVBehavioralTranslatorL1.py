@@ -12,8 +12,13 @@ from pymtl.passes.rtlir.translation.behavioral.BehavioralTranslatorL1\
     import BehavioralTranslatorL1
 from pymtl.passes.rtlir.RTLIRType import *
 from pymtl.passes.rtlir.behavioral.BehavioralRTLIR import *
+from SVBehavioralTranslatorL0 import SVBehavioralTranslatorL0
 
-class SVBehavioralTranslatorL1( BehavioralTranslatorL1 ):
+class SVBehavioralTranslatorL1(
+    SVBehavioralTranslatorL0, BehavioralTranslatorL1 ):
+
+  def _get_rtlir2sv_visitor( s ):
+    return BehavioralRTLIRToSVVisitorL1
 
   def rtlir_tr_upblk_decls( s, upblk_srcs ):
     ret = ''
@@ -22,9 +27,19 @@ class SVBehavioralTranslatorL1( BehavioralTranslatorL1 ):
       ret += '\n' + '\n'.join( upblk_src )
     return ret
 
-  def rtlir_tr_upblk_decl( s, m, upblk, rtlir_upblk ):
-    visitor = BehavioralRTLIRToSVVisitorL1( m )
+  def rtlir_tr_upblk_decl( s, upblk, rtlir_upblk ):
+    visitor = s._get_rtlir2sv_visitor()()
     return visitor.enter( upblk, rtlir_upblk )
+
+  def rtlir_tr_behavioral_freevars( s, freevars ):
+    return '\n'.join( freevars )
+
+  def rtlir_tr_behavioral_freevar( s, id_, rtype, array_type, dtype, obj ):
+    assert isinstance( rtype, Const ),\
+    '{} freevar should be a constant!'.format( id_ )
+    assert isinstance( rtype.get_dtype(), Vector ),\
+    '{} freevar should be a (list of) integer!'.format( id_ )
+    return s.rtlir_tr_const_decl( '_fvar_'+id_, rtype, array_type, dtype, obj )
 
 #-------------------------------------------------------------------------
 # BehavioralRTLIRToSVVisitorL1
@@ -33,8 +48,7 @@ class SVBehavioralTranslatorL1( BehavioralTranslatorL1 ):
 
 class BehavioralRTLIRToSVVisitorL1( BehavioralRTLIRNodeVisitor ):
 
-  def __init__( s, component ):
-    s.component = component
+  def __init__( s ):
 
     # Should use enum here, but enum is a python 3 feature...
     s.NONE          = 0
@@ -232,7 +246,7 @@ class BehavioralRTLIRToSVVisitorL1( BehavioralRTLIRNodeVisitor ):
     if isinstance( node.value, Base ):
       # The base of this attribute node is the component 's'.
       # Example: s.out, s.STATE_IDLE
-      assert node.value.base is s.component
+      # assert node.value.base is s.component
       ret = attr
 
     else:
@@ -248,8 +262,31 @@ class BehavioralRTLIRToSVVisitorL1( BehavioralRTLIRNodeVisitor ):
   def visit_Index( s, node ):
     idx   = s.visit( node.idx )
     value = s.visit( node.value )
+    Type = node.value.Type
 
-    return '{value}[{idx}]'.format( **locals() )
+    # Unpacked index
+    if isinstance( Type, Array ):
+      subtype = Type.get_sub_type()
+
+      if isinstance( subtype, ( Port, Wire, Const, InterfaceView ) ):
+        return '{value}[{idx}]'.format( **locals() )
+
+      else:
+        return '{value}_${idx}'.format( **locals() )
+
+    elif isinstance( Type, Signal ):
+
+      # Packed index
+      if Type.is_packed_indexable():
+        return '{value}[{idx}]'.format( **locals() )
+
+      # Bit selection
+      elif isinstance( Type.get_dtype(), Vector ):
+        return '{value}[{idx}]'.format( **locals() )
+
+      else: assert False, 'internal error: unrecoganized index'
+
+    else: assert False, 'internal error: unrecoganized index'
 
   #-----------------------------------------------------------------------
   # visit_Slice
@@ -290,7 +327,7 @@ class BehavioralRTLIRToSVVisitorL1( BehavioralRTLIRNodeVisitor ):
   #-----------------------------------------------------------------------
 
   def visit_FreeVar( s, node ):
-    assert False, "FreeVar not supported at L1"
+    return '_fvar_'+node.name
 
   #-----------------------------------------------------------------------
   # visit_TmpVar

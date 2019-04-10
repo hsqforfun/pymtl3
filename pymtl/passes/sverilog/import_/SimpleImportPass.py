@@ -27,6 +27,7 @@ class SimpleImportPass( BasePass ):
 
     try:
       model._pass_sverilog_translation.translated
+      m_rtype = model._pass_structural_rtlir_gen.rtlir_type
 
     except AttributeError:
       raise PyMTLImportError( model.__class__.__name__,
@@ -45,23 +46,29 @@ class SimpleImportPass( BasePass ):
 
     # Generate the interface structure
 
-    interface =\
-      collect_objs( model, InVPort, True ) +\
-      collect_objs( model, OutVPort, True )
+    ports = m_rtype.get_ports_packed()
+    unpacked_ports = m_rtype.get_ports()
 
-    ports = sorted(
+    # interface =\
+      # collect_objs( model, InVPort, True ) +\
+      # collect_objs( model, OutVPort, True )
+
+    port_objs = sorted(
       model.get_input_value_ports() | model.get_output_value_ports(),
       key = repr
     )
 
     # Setup verilator
 
-    lib_name, port_cdefs = setup_external_sim( sv_name, top_name, interface )
+    # lib_name, port_cdefs = setup_external_sim( sv_name, top_name, interface )
+    lib_name, port_cdefs = setup_external_sim( sv_name, top_name,
+        ports )
 
     # Create a python wrapper that can access the verilated model
 
     py_wrapper_name = generate_py_wrapper(
-      interface, ports, top_name, lib_name, port_cdefs, ssg_name
+      # interface, ports, top_name, lib_name, port_cdefs, ssg_name
+      ports, unpacked_ports, top_name, lib_name, port_cdefs, ssg_name
     )
 
     py_wrapper = py_wrapper_name.split('.')[0]
@@ -95,8 +102,11 @@ class SimpleImportPass( BasePass ):
     model._pass_simple_import.imported_model = ImportedModel()
     
     # Update the global namespace of `construct` so that the struct
-    # classes defined previously can still be used in the imported model
+    # classes defined previously can still be used in the imported model.
+    # This is simple-import only because you must have the live
+    # structs class, which is not possible in generic import.
 
     model._pass_simple_import.\
       imported_model.construct.__globals__.update(
-        get_struct_objects(interface) )
+        # get_struct_objects(interface) )
+        get_struct_objects( port_objs ) )

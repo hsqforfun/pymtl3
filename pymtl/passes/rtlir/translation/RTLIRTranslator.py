@@ -52,20 +52,19 @@ def mk_RTLIRTranslator( _BehavioralTranslator, _StructuralTranslator ):
 
         return ns
 
-      def translate_component( m, components ):
-
-        s.translate_behavioral( m )
-        s.translate_structural( m )
+      def translate_component( m, components, translated ):
 
         for child in m.get_child_components():
 
-          components.append( translate_component( child ) )
+          translate_component( child, components, translated )
 
-        components.append(
-          s.rtlir_tr_component(
-            get_component_nspace( s.behavioral, m ),
-            get_component_nspace( s.structural, m )
-        ) )
+        if not s.structural.component_unique_name[m] in translated:
+          components.append(
+            s.rtlir_tr_component(
+              get_component_nspace( s.behavioral, m ),
+              get_component_nspace( s.structural, m )
+          ) )
+          translated.append( s.structural.component_unique_name[m] )
 
         s.gen_hierarchy_metadata( 'decl_type_vector', 'decl_type_vector' )
         s.gen_hierarchy_metadata( 'decl_type_array', 'decl_type_array' )
@@ -82,7 +81,10 @@ def mk_RTLIRTranslator( _BehavioralTranslator, _StructuralTranslator ):
       s.hierarchy.decl_type_struct = []
       s.hierarchy.def_ifcs = []
 
-      translate_component( s.top, s.hierarchy.components )
+      s.translate_behavioral( s.top )
+      s.translate_structural( s.top )
+
+      translate_component( s.top, s.hierarchy.components, [] )
 
       # Generate the representation for all components
 

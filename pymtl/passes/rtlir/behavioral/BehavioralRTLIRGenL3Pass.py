@@ -12,6 +12,7 @@ from pymtl        import *
 from pymtl.passes import BasePass, PassMetadata
 from pymtl.passes.utility import is_BitsX
 
+from errors import PyMTLSyntaxError
 from BehavioralRTLIRGenL2Pass import BehavioralRTLIRGeneratorL2
 
 class BehavioralRTLIRGenL3Pass( BasePass ):

@@ -6,8 +6,9 @@
 # Author : Peitian Pan
 # Date   : Apr 3, 2019
 
-from pymtl.passes.rtlir.RTLIRType import Interface
 from StructuralRTLIRGenL2Pass import StructuralRTLIRGenL2Pass
+from ..RTLIRType import *
+from StructuralRTLIRSignalExpr import CurComp
 
 class StructuralRTLIRGenL3Pass( StructuralRTLIRGenL2Pass ):
 
@@ -18,6 +19,14 @@ class StructuralRTLIRGenL3Pass( StructuralRTLIRGenL2Pass ):
     s.gen_interfaces( top )
 
   #-----------------------------------------------------------------------
+  # collect_all_interfaces
+  #-----------------------------------------------------------------------
+
+  def collect_ifcs( s, m_rtype ):
+
+    return m_rtype.get_ifc_views_packed()
+
+  #-----------------------------------------------------------------------
   # gen_interfaces
   #-----------------------------------------------------------------------
   # Figure out the interfaces that each interface view belongs to.
@@ -26,9 +35,12 @@ class StructuralRTLIRGenL3Pass( StructuralRTLIRGenL2Pass ):
 
     ifcs = []
     view2ifc = {}
-    top_views = top._pass_structural_rtlir_gen.rtlir_type.get_ifc_views()
+    top_views = s.collect_ifcs( top._pass_structural_rtlir_gen.rtlir_type )
 
-    for idx, ( view_name, view_rtype ) in enumerate( top_views ):
+    for idx, ( view_name, rtype ) in enumerate( top_views ):
+
+      view_rtype = rtype.get_sub_type() if isinstance(rtype, Array)\
+              else rtype
 
       view2ifc[ view_name ] =\
           ( Interface( '_TmpIfc'+str(idx), [ view_rtype ] ), view_rtype )
@@ -36,9 +48,15 @@ class StructuralRTLIRGenL3Pass( StructuralRTLIRGenL2Pass ):
     # Group all the views that do not conflict with each other into the
     # same interface
 
-    for idx, ( view_name, view_rtype ) in enumerate( top_views[:-1] ):
+    for idx, ( view_name, rtype ) in enumerate( top_views[:-1] ):
 
-      for _view_name, _view_rtype in top_views[ idx+1: ]:
+      view_rtype = rtype.get_sub_type() if isinstance(rtype, Array)\
+              else rtype
+
+      for _view_name, _rtype in top_views[ idx+1: ]:
+
+        _view_rtype = _rtype.get_sub_type() if isinstance(_rtype, Array)\
+                 else _rtype
 
         if view2ifc[ view_name ][0].can_add_view( _view_rtype ):
 
@@ -68,10 +86,10 @@ class StructuralRTLIRGenL3Pass( StructuralRTLIRGenL2Pass ):
   # Override
   def contains( s, obj, signal ):
 
-    if obj == signal: return True
+    if super(StructuralRTLIRGenL3Pass, s).contains(obj, signal): return True
 
-    if not signal._dsl.parent_obj is None:
+    if not isinstance( signal, CurComp ):
 
-      return s.contains( obj, signal._dsl.parent_obj )
+      return s.contains( obj, signal.get_base() )
 
     return False

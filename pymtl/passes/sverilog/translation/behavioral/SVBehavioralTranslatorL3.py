@@ -13,20 +13,14 @@ from pymtl.passes.rtlir.translation.behavioral.BehavioralTranslatorL3\
 from pymtl.passes.rtlir.behavioral.BehavioralRTLIR import *
 from pymtl.passes.rtlir.RTLIRType import *
 
-from SVBehavioralTranslatorL2 import BehavioralRTLIRToSVVisitorL2
+from SVBehavioralTranslatorL2 import BehavioralRTLIRToSVVisitorL2,\
+                                     SVBehavioralTranslatorL2
 
-class SVBehavioralTranslatorL3( BehavioralTranslatorL3 ):
+class SVBehavioralTranslatorL3(
+    SVBehavioralTranslatorL2, BehavioralTranslatorL3 ):
 
-  def rtlir_tr_upblk_decls( s, upblk_srcs ):
-    ret = ''
-    for upblk_src in upblk_srcs:
-      make_indent( upblk_src, 1 )
-      ret += '\n' + '\n'.join( upblk_src )
-    return ret
-
-  def rtlir_tr_upblk_decl( s, m, upblk, rtlir_upblk ):
-    visitor = BehavioralRTLIRToSVVisitorL3( m )
-    return visitor.enter( upblk, rtlir_upblk )
+  def _get_rtlir2sv_visitor( s ):
+    return BehavioralRTLIRToSVVisitorL3
 
 #-------------------------------------------------------------------------
 # BehavioralRTLIRToSVVisitorL3
@@ -34,10 +28,6 @@ class SVBehavioralTranslatorL3( BehavioralTranslatorL3 ):
 # Visitor that translates RTLIR to SystemVerilog for a single upblk.
 
 class BehavioralRTLIRToSVVisitorL3( BehavioralRTLIRToSVVisitorL2 ):
-
-  def __init__( s, component ):
-
-    super( BehavioralRTLIRToSVVisitorL3, s ).__init__( component )
 
   #-----------------------------------------------------------------------
   # visit_StructInst
@@ -53,13 +43,19 @@ class BehavioralRTLIRToSVVisitorL3( BehavioralRTLIRToSVVisitorL2 ):
 
   def visit_Attribute( s, node ):
 
-    if isinstance( node.value.Type, Struct ):
+    if isinstance( node.value.Type, Signal ):
 
-      value = s.visit( node.value )
-      attr = node.attr
+      if isinstance( node.value.Type, Const ):
+        assert False,\
+            'attritbute {} of constants {} are not supported!'.format(
+                node.attr, node.value
+            )
 
-      return '{value}.{attr}'.format( **locals() )
+      if isinstance( node.value.Type.get_dtype(), Struct ):
 
-    else:
+        value = s.visit( node.value )
+        attr = node.attr
 
-      return super( BehavioralRTLIRToSVVisitorL3, s ).visit_Attribute( node )
+        return '{value}.{attr}'.format( **locals() )
+
+    return super( BehavioralRTLIRToSVVisitorL3, s ).visit_Attribute( node )

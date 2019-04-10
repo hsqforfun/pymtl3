@@ -211,7 +211,7 @@ def run_translation_reference_test(
 
   model.elaborate()
   model.apply( TranslationPass() )
-  godel.apply( ImportPass() )
+  model.apply( ImportPass() )
 
   dut = model._pass_simple_import.imported_model
 

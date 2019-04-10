@@ -21,14 +21,15 @@ from helpers import *
 #-----------------------------------------------------------------------
 # The entrance function to setup external simulation. `sv_name` is the
 # SystemVerilog file name; `top_name` is the name of the top module;
-# `interface` is a structure that contains all information about the
-# module's interface.
+# `ports` is a structure that contains all information about the
+# module's ports.
 
-def setup_external_sim( sv_name, top_name, interface ):
+def setup_external_sim( sv_name, top_name, ports ):
 
   create_verilator_model( sv_name, top_name )
 
-  wrapper_name, port_cdefs = create_verilator_c_wrapper( top_name, interface )
+  wrapper_name, port_cdefs = create_verilator_c_wrapper( top_name,
+      ports )
 
   lib_name = create_shared_lib( wrapper_name, top_name )
 
@@ -80,7 +81,7 @@ def create_verilator_model( sv_name, top_name ):
 # Create a C wrapper that calls verilator C API and provides interfaces
 # that can be later called through CFFI.
 
-def create_verilator_c_wrapper( top_name, interface ):
+def create_verilator_c_wrapper( top_name, ports ):
 
   # The template should be in the same directory as this file
 
@@ -94,7 +95,7 @@ def create_verilator_c_wrapper( top_name, interface ):
 
   port_cdefs = []
 
-  for name, port in interface:
+  for name, port in ports:
     
     port_cdefs.append( generate_signal_decl_c( name, port ) )
 
@@ -106,7 +107,7 @@ def create_verilator_c_wrapper( top_name, interface ):
 
   port_inits = []
 
-  for name, port in interface:
+  for name, port in ports:
     port_inits.extend( generate_signal_init_c( name, port ) )
 
   make_indent( port_inits, 1 )
@@ -117,7 +118,7 @@ def create_verilator_c_wrapper( top_name, interface ):
 
   port_print = []
 
-  for name, port in interface:
+  for name, port in ports:
     port_print.append( generate_signal_print_c( name, port ) )
 
   make_indent( port_print, 1 )

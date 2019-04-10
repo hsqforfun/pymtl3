@@ -13,19 +13,12 @@ from pymtl.passes.utility import *
 from pymtl.passes.rtlir.RTLIRType import *
 from pymtl.passes.rtlir.structural.StructuralRTLIRGenL3Pass\
     import StructuralRTLIRGenL3Pass
+from pymtl.passes.rtlir.structural.StructuralRTLIRSignalExpr\
+    import *
 
-from ..BaseRTLIRTranslator import BaseRTLIRTranslator, TranslatorMetadata
 from StructuralTranslatorL2 import StructuralTranslatorL2
 
 class StructuralTranslatorL3( StructuralTranslatorL2 ):
-
-  def __init__( s, top ):
-
-    super( StructuralTranslatorL3, s ).__init__( top )
-
-    # Declarations
-
-    s.structural.decl_ifcs = {}
 
   #-----------------------------------------------------------------------
   # gen_structural_trans_metadata
@@ -43,6 +36,10 @@ class StructuralTranslatorL3( StructuralTranslatorL2 ):
   # Override
   def translate_structural( s, top ):
 
+    # Declarations
+
+    s.structural.decl_ifcs = {}
+
     # Translate the definition of interfaces
 
     def_ifcs = []
@@ -53,12 +50,20 @@ class StructuralTranslatorL3( StructuralTranslatorL2 ):
 
       interface_wires = []
 
-      for wire_name, wire_rtype in ifc.get_all_properties().iteritems():
+      for wire_id, rtype in ifc.get_all_wires_packed():
+
+        if isinstance( rtype, Array ):
+          array_rtype = rtype
+          wire_rtype = rtype.get_sub_type()
+        else:
+          array_rtype = None
+          wire_rtype = rtype
 
         interface_wires.append(
           s.rtlir_tr_interface_wire_decl(
-            s.rtlir_tr_var_name( wire_name ),
+            s.rtlir_tr_var_id( wire_id ),
             wire_rtype,
+            s.rtlir_tr_unpacked_array_type( array_rtype ),
             s.rtlir_data_type_translation( top, wire_rtype.get_dtype() )
         ) )
 
@@ -74,11 +79,21 @@ class StructuralTranslatorL3( StructuralTranslatorL2 ):
 
         # Translate the direction of each port
 
-        for port_name, port_rtype in view.get_all_properties().iteritems():
+        for port_id, rtype in view.get_all_ports_packed():
+
+          if isinstance( rtype, Array ):
+            array_rtype = rtype
+            port_rtype = rtype.get_sub_type()
+          else:
+            array_rtype = None
+            port_rtype = rtype
 
           port_decls.append(
             s.rtlir_tr_interface_view_port_direction(
-              s.rtlir_tr_var_name( port_name ), port_rtype ) )
+              s.rtlir_tr_var_id( port_id ),
+              port_rtype,
+              s.rtlir_tr_unpacked_array_type( array_rtype )
+            ) )
 
         interface_views.append( s.rtlir_tr_interface_view_decl(
           view, s.rtlir_tr_interface_view_port_directions( port_decls ) ) )
@@ -105,11 +120,21 @@ class StructuralTranslatorL3( StructuralTranslatorL2 ):
 
     ifc_decls, ifc_defs = [], []
 
-    for ifc_name, rtype in m_rtype.get_ifc_views():
+    for ifc_id, rtype in m_rtype.get_ifc_views_packed():
+
+      if isinstance( rtype, Array ):
+        array_rtype = rtype
+        ifc_rtype = rtype.get_sub_type()
+      else:
+        array_rtype = None
+        ifc_rtype = rtype
 
       ifc_decls.append(
-        s.rtlir_tr_interface_port_decl( ifc_name, rtype )
-      )
+        s.rtlir_tr_interface_port_decl(
+          ifc_id,
+          ifc_rtype,
+          s.rtlir_tr_unpacked_array_type( array_rtype )
+      ) )
 
     s.structural.decl_ifcs[m] = s.rtlir_tr_interface_port_decls( ifc_decls )
 
@@ -124,98 +149,31 @@ class StructuralTranslatorL3( StructuralTranslatorL2 ):
     super( StructuralTranslatorL3, s ).translate_decls( m )
 
   #-----------------------------------------------------------------------
-  # rtlir_signal_translation
+  # rtlir_signal_expr_translation
   #-----------------------------------------------------------------------
-  # Translate a PyMTL dsl signal object into its backend representation.
+  # Translate a signal expression in RTLIR into its backend representation.
+  # Add support for the following operations at L3:
+  # InterfaceAttr
 
   # Override
-  def rtlir_signal_translation( s, obj, m ):
+  def rtlir_signal_expr_translation( s, expr, m ):
 
-    def is_ifc_attribute( signal ):
+    if isinstance( expr, InterfaceAttr ):
 
-      if isinstance( signal._dsl.parent_obj, pymtl.dsl.Interface ) and\
-         signal in signal._dsl.parent_obj.__dict__.values():
+      return s.rtlir_tr_interface_attr(
+        s.rtlir_signal_expr_translation( expr.get_base(), m ),
+        expr.get_attr() )
 
-        return True
+    elif isinstance( expr, InterfaceViewIndex ):
 
-      else: return False
-
-    # L3: obj must be a signal/ifc that belongs to the current component. No
-    # subcomponent is allowed at this level.
-    # `obj` here should be a PyMTL Connectable instance
-
-    # Signal ( Port, Wire ) connectable
-
-    if isinstance( obj, pymtl.dsl.Signal ):
-
-      # `obj` is an attribute of an interface
-
-      if is_ifc_attribute( obj ):
-
-        return s.rtlir_tr_interface_attr(
-          s.rtlir_signal_translation( obj._dsl.parent_obj, m ),
-          obj._dsl.my_name
-        )
-
-      else:
-
-        return super( StructuralTranslatorL3, s ).\
-            rtlir_signal_translation( obj, m )
-
-    # Const connetable
-
-    elif isinstance( obj, pymtl.dsl.Const ):
-
-      # Constant objects cannot be the attribute of an interface
-
-      if is_ifc_attribute( obj ):
-
-        assert False, '{} is not a port object of interface {}!'.format(
-            obj, obj._dsl.parent_obj )
-
-      else:
-
-        return super( StructuralTranslatorL3, s ).\
-            rtlir_signal_translation( obj, m )
-
-    # Interface connectable
-
-    elif isinstance( obj, pymtl.dsl.Interface ):
-
-      # Interface `obj` is an attribute of another interface
-
-      if is_ifc_attribute( obj ):
-
-        return s.rtlir_tr_interface_attr(
-          s.rtlir_tr_interface_attr( obj._dsl.parent_obj, m ),
-          obj._dsl.my_name
-        )
-
-      # Refer to the interface object of the current component
-
-      elif ( 'level' in obj._dsl.__dict__ ):
-
-        m_level = m._dsl.level
-        obj_level = obj._dsl.level
-
-        assert obj_level == ( m_level + 1 ),\
-"{} is not an attribute of component {}. Subcomponent is not supported at L3!"\
-          .format( obj, m )
-
-        return s.rtlir_tr_var_name( obj._dsl.my_name )
-
-      # Unrecognized signal expression...
-
-      else:
-
-        assert False, 'unknown signal expression {} at L3!'.format( obj )
-
-    # Everything else belongs to the previous levels
+      return s.rtlir_tr_interface_port_array_index(
+        s.rtlir_signal_expr_translation( expr.get_base(), m ),
+        expr.get_index() )
 
     else:
 
       return super( StructuralTranslatorL3, s ).\
-          rtlir_signal_translation( obj, m )
+          rtlir_signal_expr_translation( expr, m )
 
   #-----------------------------------------------------------------------
   # Methods to be implemented by the backend translator
@@ -226,25 +184,25 @@ class StructuralTranslatorL3( StructuralTranslatorL2 ):
   def rtlir_tr_interface_port_decls( s, ifcs ):
     raise NotImplementedError()
 
-  def rtlir_tr_interface_port_decl( s, ifc_name, ifc_decl ):
+  def rtlir_tr_interface_port_decl( s, ifc_id, ifc_rtype, array_type ):
     raise NotImplementedError()
 
   def rtlir_tr_interface_view_port_directions( s, directions ):
     raise NotImplementedError()
 
-  def rtlir_tr_interface_view_port_direction( s, name, rtype ):
+  def rtlir_tr_interface_view_port_direction( s, id_, rtype, array_type ):
     raise NotImplementedError()
 
   def rtlir_tr_interface_view_decls( s, view_decls ):
     raise NotImplementedError()
 
-  def rtlir_tr_interface_view_decl( s, view_rtype ):
+  def rtlir_tr_interface_view_decl( s, view_rtype, directions ):
     raise NotImplementedError()
 
   def rtlir_tr_interface_wire_decls( s, wire_decls ):
     raise NotImplementedError()
 
-  def rtlir_tr_interface_wire_decl( s, name, rtype ):
+  def rtlir_tr_interface_wire_decl( s, id_, rtype, array_type, dtype ):
     raise NotImplementedError()
 
   # Definitions
@@ -256,6 +214,9 @@ class StructuralTranslatorL3( StructuralTranslatorL2 ):
     raise NotImplementedError()
 
   # Signal operations
+
+  def rtlir_tr_interface_port_array_index( s, base_signal, index ):
+    raise NotImplementedError()
 
   def rtlir_tr_interface_attr( s, base_signal, attr ):
     raise NotImplementedError()

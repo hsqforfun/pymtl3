@@ -12,20 +12,14 @@ from pymtl.passes.rtlir.translation.behavioral.BehavioralTranslatorL4\
     import BehavioralTranslatorL4
 from pymtl.passes.rtlir.RTLIRType import *
 
-from SVBehavioralTranslatorL3 import BehavioralRTLIRToSVVisitorL3
+from SVBehavioralTranslatorL3 import BehavioralRTLIRToSVVisitorL3,\
+                                     SVBehavioralTranslatorL3
 
-class SVBehavioralTranslatorL4( BehavioralTranslatorL4 ):
+class SVBehavioralTranslatorL4(
+    SVBehavioralTranslatorL3, BehavioralTranslatorL4 ):
 
-  def rtlir_tr_upblk_decls( s, upblk_srcs ):
-    ret = ''
-    for upblk_src in upblk_srcs:
-      make_indent( upblk_src, 1 )
-      ret += '\n' + '\n'.join( upblk_src )
-    return ret
-
-  def rtlir_tr_upblk_decl( s, m, upblk, rtlir_upblk ):
-    visitor = BehavioralRTLIRToSVVisitorL4( m )
-    return visitor.enter( upblk, rtlir_upblk )
+  def _get_rtlir2sv_visitor( s ):
+    return BehavioralRTLIRToSVVisitorL4
 
 #-------------------------------------------------------------------------
 # BehavioralRTLIRToSVVisitorL4
@@ -34,13 +28,13 @@ class SVBehavioralTranslatorL4( BehavioralTranslatorL4 ):
 
 class BehavioralRTLIRToSVVisitorL4( BehavioralRTLIRToSVVisitorL3 ):
 
-  def __init__( s, component ):
-
-    super( BehavioralRTLIRToSVVisitorL4, s ).__init__( component )
+  #-----------------------------------------------------------------------
+  # visit_Attribute
+  #-----------------------------------------------------------------------
 
   def visit_Attribute( s, node ):
 
-    if isinstance( node.value, Interface ):
+    if isinstance( node.value, InterfaceView ):
 
       value = s.visit( node.value )
       attr = node.attr
@@ -50,22 +44,3 @@ class BehavioralRTLIRToSVVisitorL4( BehavioralRTLIRToSVVisitorL3 ):
     else:
 
       return super( BehavioralRTLIRToSVVisitorL4, s ).visit_Attribute( node )
-
-  #-----------------------------------------------------------------------
-  # visit_Index
-  #-----------------------------------------------------------------------
-  # An array of interfaces should be name-mangled to individual
-  # interfaces.
-
-  def visit_Index( s, node ):
-
-    if isinstance( node.value.Type, Interface ):
-
-      idx = node.idx.Type.value
-      value = s.visit( node.value )
-      
-      return '{value}_{idx}'.format( **locals() )
-
-    else:
-
-      return super( BehavioralRTLIRToSVVisitorL4, s ).visit_Index( node )

@@ -6,19 +6,17 @@
 # Author : Shunning Jiang, Peitian Pan
 # Date   : Apr 3, 2019
 
+from pymtl.passes import PassMetadata
 from StructuralRTLIRGenL3Pass import StructuralRTLIRGenL3Pass
+from StructuralRTLIRSignalExpr import gen_signal_expr
 
 class StructuralRTLIRGenL4Pass( StructuralRTLIRGenL3Pass ):
 
   # Override
   def __call__( s, top ):
 
-    s.top = top
     s.gen_metadata( top )
-    s.gen_rtlir_types( top )
-    s.gen_constants( top )
-    s.gen_connections( top )
-    s.sort_connections( top )
+    super( StructuralRTLIRGenL4Pass, s ).__call__( top )
 
   #-----------------------------------------------------------------------
   # gen_metadata
@@ -30,9 +28,7 @@ class StructuralRTLIRGenL4Pass( StructuralRTLIRGenL3Pass ):
 
       m._pass_structural_rtlir_gen = PassMetadata()
 
-    for child in m.get_child_components():
-
-      s.gen_metadata( child )
+    for child in m.get_child_components(): s.gen_metadata( child )
 
   #-----------------------------------------------------------------------
   # gen_rtlir_types
@@ -41,11 +37,9 @@ class StructuralRTLIRGenL4Pass( StructuralRTLIRGenL3Pass ):
   # Override
   def gen_rtlir_types( s, m ):
 
-    m._pass_structural_rtlir_gen.rtlir_type = get_rtlir_type( m )
+    super( StructuralRTLIRGenL4Pass, s ).gen_rtlir_types( m )
 
-    for child in m.get_child_components():
-      
-      s.gen_rtlir_types( child )
+    for child in m.get_child_components(): s.gen_rtlir_types( child )
 
   #-----------------------------------------------------------------------
   # gen_constants
@@ -54,110 +48,57 @@ class StructuralRTLIRGenL4Pass( StructuralRTLIRGenL3Pass ):
   # Override
   def gen_constants( s, m ):
 
-    ns = m._pass_structural_rtlir_gen
-    ns.consts = []
-    rtype = ns.rtlir_type
-    const_types = rtype.get_consts()
+    super( StructuralRTLIRGenL4Pass, s ).gen_constants( m )
 
-    for const_name, const_rtype in const_types:
-
-      assert const_name in m.__dict__
-      const_instance = m.__dict__[ const_name ]
-      ns.consts.append( ( const_name, const_rtype, const_instance ) )
-
-    for child in m.get_child_components():
-
-      s.gen_constants( child )
+    for child in m.get_child_components(): s.gen_constants( child )
 
   #-----------------------------------------------------------------------
-  # gen_connections
+  # add_conn_self_child
   #-----------------------------------------------------------------------
-  # Generate connections based on the net structures. This function must
-  # be called from the top component!
 
   # Override
-  def gen_connections( s, top ):
+  def add_conn_self_child( s, component, writer, reader ):
 
-    ns = top._pass_structural_rtlir_gen
-    ns.connections_self_self = defaultdict( set )
-    ns.connections_self_child = defaultdict( set )
-    ns.connections_child_child = defaultdict( set )
+    ns = s.top._pass_structural_rtlir_gen
 
-    nets = top.get_all_value_nets()
-    adjs = top.get_signal_adjacency_dict()
+    _rw_pair = ( gen_signal_expr( writer ), gen_signal_expr( reader ) )
 
-    for writer, net in nets:
+    ns.connections_self_child[ component ].add( _rw_pair )
 
-      S = deque( [ writer ] )
-      visited = set( [ writer ] )
+  #-----------------------------------------------------------------------
+  # add_conn_child_child
+  #-----------------------------------------------------------------------
 
-      while S:
+  # Override
+  def add_conn_child_child( s, component, writer, reader ):
 
-        u = S.pop()
-        writer_host        = u.get_host_component()
-        writer_host_parent = writer_host.get_parent_object() 
+    ns = s.top._pass_structural_rtlir_gen
 
-        for v in adjs[u]:
+    _rw_pair = ( gen_signal_expr( writer ), gen_signal_expr( reader ) )
 
-          if v not in visited:
+    ns.connections_child_child[ component ].add( _rw_pair )
 
-            visited.add( v )
-            S.append( v )
-            reader_host        = v.get_host_component()
-            reader_host_parent = reader_host.get_parent_object()
+  #-----------------------------------------------------------------------
+  # collect_connections
+  #-----------------------------------------------------------------------
 
-            # Four possible cases for the reader and writer signals:
-            # 1.   They have the same host component. Both need 
-            #       to be added to the host component.
-            # 2/3. One's host component is the parent of the other.
-            #       Both need to be added to the parent component.
-            # 4.   They have the same parent component.
-            #       Both need to be added to the parent component.
+  # Override
+  def collect_connections( s, m ):
 
-            if writer_host is reader_host:
+    ns = s.top._pass_structural_rtlir_gen
 
-              ns.connections_self_self[ writer_host ].add( ( u, v ) )
-
-            elif writer_host_parent is reader_host:
-
-              ns.connections_self_child[ reader_host ].add( ( u, v ) )
-
-            elif writer_host is reader_host_parent:
-
-              ns.connections_self_child[ writer_host ].add( ( u, v ) )
-
-            elif writer_host_parent == reader_host_parent:
-
-              ns.connections_child_child[ writer_host_parent ].add( ( u, v ) )
-
-            else: assert False
+    return super( StructuralRTLIRGenL4Pass, s ).collect_connections( m )+\
+           map( lambda x: ( x, False ), ns.connections_self_child[m] )+\
+           map( lambda x: ( x, False ), ns.connections_child_child[m] )
 
   #-----------------------------------------------------------------------
   # sort_connections
   #-----------------------------------------------------------------------
+  # At L4 we need to recursively generate connections for every component
 
   # Override
   def sort_connections( s, m ):
 
-    ns = s.top._pass_structural_rtlir_gen
+    super( StructuralRTLIRGenL4Pass, s ).sort_connections( m )
 
-    m_conn = map( lambda x: (x, False), ns.connections_self_self[m] )
-    m_conn.extend(map( lambda x: (x, False), ns.connections_self_child[m] ))
-    m_conn.extend(map( lambda x: (x, False), ns.connections_child_child[m] ))
-
-    connections = []
-
-    for u, v in m.get_connect_order():
-
-      for idx, ( ( wr, rd ), visited ) in enumerate( m_conn ):
-
-        if ( ( s.contains( u, wr ) and s.contains( v, rd ) ) or\
-           ( s.contains( u, rd ) and s.contains( v, wr ) ) ) and not visited:
-
-          connections.append( ( wr, rd ) )
-          m_conn[idx] = ( m_conn[idx][0], True )
-
-    connections.extend(
-      map( lambda x: x[0], filter( lambda x: not x[1], m_conn ) ) )
-
-    m._pass_structural_rtlir_gen.connections = connections
+    for child in m.get_child_components(): s.sort_connections( child )

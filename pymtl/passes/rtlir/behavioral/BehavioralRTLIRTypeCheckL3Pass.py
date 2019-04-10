@@ -19,9 +19,6 @@ from errors             import PyMTLTypeError
 
 class BehavioralRTLIRTypeCheckL3Pass( BasePass ):
 
-  def __init__( s, type_env ):
-    s.type_env = type_env
-
   def __call__( s, m ):
     """perform type checking on all RTLIR in rtlir_upblks"""
 
@@ -32,7 +29,7 @@ class BehavioralRTLIRTypeCheckL3Pass( BasePass ):
     m._pass_behavioral_rtlir_type_check.rtlir_tmpvars = {}
 
     visitor = BehavioralRTLIRTypeCheckVisitorL3(
-      m, s.type_env,
+      m,
       m._pass_behavioral_rtlir_type_check.rtlir_freevars,
       m._pass_behavioral_rtlir_type_check.rtlir_tmpvars
     )
@@ -47,15 +44,52 @@ class BehavioralRTLIRTypeCheckL3Pass( BasePass ):
 
 class BehavioralRTLIRTypeCheckVisitorL3( BehavioralRTLIRTypeCheckVisitorL2 ):
 
-  def __init__( s, component, type_env, freevars, tmpvars ):
+  def __init__( s, component, freevars, tmpvars ):
 
     super( BehavioralRTLIRTypeCheckVisitorL3, s ).\
-        __init__( component, type_env, freevars, tmpvars )
+        __init__( component, freevars, tmpvars )
 
     s.type_expect[ 'Attribute' ] = {
-      'value':( (Module, Struct),
-        'the base of an attribute must be one of: module, struct!' )
+      'value':( (Component, Signal),
+        'the base of an attribute must be one of: component, signal!' )
     }
+
+  #-------------------------------------------------------------------------
+  # visit_Attribute
+  #-------------------------------------------------------------------------
+
+  def visit_Attribute( s, node ):
+
+    if isinstance( node.value.Type, Signal ):
+
+      dtype = node.value.Type.get_dtype()
+
+      if not isinstance( dtype, Struct ):
+        raise PyMTLTypeError(
+          s.blk, node.ast, 'attribute base should be a struct signal!'
+        )
+
+      if not dtype.has_property( node.attr ):
+        raise PyMTLTypeError(
+          s.blk, node.ast, '{} does not have field {}!'.format(
+            dtype.get_name(), node.attr
+          )
+        )
+
+      dtype = dtype.get_property( node.attr )
+      if isinstance( node.value.Type, Port ):
+        rtype = Port( node.value.Type.get_direction(), dtype )
+      elif isinstance( node.value.Type, Wire ):
+        rtype = Wire( dtype )
+      else:
+        raise PyMTLTypeError(
+          s.blk, node.ast, 'constant struct is not supported!' )
+
+      node.Type = rtype
+
+    else:
+
+      super( BehavioralRTLIRTypeCheckVisitorL3, s ).visit_Attribute( node )
 
   #-----------------------------------------------------------------------
   # visit_StructInst

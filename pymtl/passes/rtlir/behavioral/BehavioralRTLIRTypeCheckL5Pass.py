@@ -18,9 +18,6 @@ from errors             import PyMTLTypeError
 
 class BehavioralRTLIRTypeCheckL5Pass( BasePass ):
 
-  def __init__( s, type_env ):
-    s.type_env = type_env
-
   def __call__( s, m ):
     """perform type checking on all RTLIR in rtlir_upblks"""
 
@@ -31,7 +28,7 @@ class BehavioralRTLIRTypeCheckL5Pass( BasePass ):
     m._pass_behavioral_rtlir_type_check.rtlir_tmpvars = {}
 
     visitor = BehavioralRTLIRTypeCheckVisitorL5(
-      m, s.type_env,
+      m,
       m._pass_behavioral_rtlir_type_check.rtlir_freevars,
       m._pass_behavioral_rtlir_type_check.rtlir_tmpvars
     )
@@ -46,10 +43,10 @@ class BehavioralRTLIRTypeCheckL5Pass( BasePass ):
 
 class BehavioralRTLIRTypeCheckVisitorL5( BehavioralRTLIRTypeCheckVisitorL4 ):
 
-  def __init__( s, component, type_env, freevars, tmpvars ):
+  def __init__( s, component, freevars, tmpvars ):
 
     super( BehavioralRTLIRTypeCheckVisitorL5, s ).\
-        __init__( component, type_env, freevars, tmpvars )
+        __init__( component, freevars, tmpvars )
 
   #-----------------------------------------------------------------------
   # visit_Index
@@ -58,9 +55,10 @@ class BehavioralRTLIRTypeCheckVisitorL5( BehavioralRTLIRTypeCheckVisitorL4 ):
 
   def visit_Index( s, node ):
 
-    if isinstance( node.value.Type, Module ):
+    if isinstance( node.value.Type, Array ) and\
+       isinstance( node.value.Type.get_sub_type(), Component ):
 
-      if not isinstance( node.idx.Type, Const ) or not node.idx.Type.is_static:
+      if not hasattr( node, '_value' ):
 
         raise PyMTLTypeError(
           s.blk, node.ast,
@@ -83,9 +81,32 @@ class BehavioralRTLIRTypeCheckVisitorL5( BehavioralRTLIRTypeCheckVisitorL4 ):
     else:
       _cleanup_level = False
 
-    super( BehavioralRTLIRTypeCheckVisitorL5, s ).visit_Attribute( node )
+    # Attributes of subcomponent can only access ports
 
-    if isinstance( node.value, Module ):
+    if isinstance( node.value.Type, Component ) and\
+       not node.value.Type.get_name() == s.component.__class__.__name__:
+
+      if not node.value.Type.has_property( node.attr ):
+        raise PyMTLTypeError(
+          s.blk, node.ast,
+          'Component {} does not have attribute {}!'.format(
+            node.value.Type.get_name(), node.attr ) )
+
+      prop = node.value.Type.get_property( node.attr )
+
+      if not is_of_type( prop, Port ):
+        raise PyMTLTypeError(
+          s.blk, node.ast,
+          '{} is not a port of subcomponent {}!'.format(
+            node.attr, node.value.Type.get_name() ) )
+
+      node.Type = prop
+
+    else:
+
+      super( BehavioralRTLIRTypeCheckVisitorL5, s ).visit_Attribute( node )
+
+    if isinstance( node.value, Component ):
       s._hierarhcy_level += 1
 
     if s._hierarhcy_level > 2:

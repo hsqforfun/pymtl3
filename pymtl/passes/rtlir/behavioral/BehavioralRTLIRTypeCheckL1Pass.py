@@ -167,7 +167,7 @@ class BehavioralRTLIRTypeCheckVisitorL1( BehavioralRTLIRNodeVisitor ):
 
     if isinstance( t, Const ) and isinstance( t.get_dtype(), Vector ):
 
-      node._value = pymtl.mk_Bits( t.get_dtype().get_length() )( node.obj )
+      node._value = pymtl.mk_bits( t.get_dtype().get_length() )( node.obj )
 
     node.Type = t
 
@@ -218,14 +218,21 @@ class BehavioralRTLIRTypeCheckVisitorL1( BehavioralRTLIRNodeVisitor ):
 
   def visit_Attribute( s, node ):
 
-    # node.value should subclass RTLIRType.BaseAttr
-    # Make sure node.value has an attribute named attr
+    # Attribute supported at L1: CurCompAttr
 
-    if not node.value.Type.has_property( node.attr ):
+    if isinstance( node.value, Base ):
+      if not node.value.Type.has_property( node.attr ):
+        raise PyMTLTypeError(
+          s.blk, node.ast, 'type {} does not have attribute {}!'.format(
+            node.value.Type, node.attr
+        ) )
+
+    else:
       raise PyMTLTypeError(
-        s.blk, node.ast, 'type {} does not have attribute {}!'.format(
-          node.value.Type, node.attr
+        s.blk, node.ast, '{} of type {} is not supported at L1!'.format(
+          node.attr, node.value.Type
       ) )
+
 
     # value.attr has the type that is specified by the base
 
@@ -239,34 +246,48 @@ class BehavioralRTLIRTypeCheckVisitorL1( BehavioralRTLIRNodeVisitor ):
 
     idx = getattr( node.idx, '_value', None )
 
-    dtype = node.value.Type.get_dtype()
+    if isinstance( node.value.Type, Array ):
 
-    if isinstance( dtype, Array ):
-
-      if ( not idx is None ) and not ( 0<=idx<=dtype.get_dim_sizes()[0] ):
-
-        raise PyMTLTypeError(
-          s.blk, node.ast, 'array index out of range!'
-        )
-
-      node.Type = Wire( dtype.get_next_dim_type() )
-
-    elif isinstance( dtype, Vector ):
-
-      if ( not idx is None ) and not( 0<=idx<=dtype.get_length() ):
+      if ( not idx is None ) and not(
+          0<=idx<=node.value.Type.get_dim_sizes()[0] ):
 
         raise PyMTLTypeError(
-          s.blk, node.ast, 'bit selection index out of range!'
-        )
+          s.blk, node.ast, 'array index out of range!' )
 
-      node.Type = Wire( Vector( 1 ) )
+      node.Type = node.value.Type.get_next_dim_type()
+
+    elif isinstance( node.value.Type, Signal ):
+
+      dtype = node.value.Type.get_dtype()
+
+      if node.value.Type.is_packed_indexable():
+
+        if ( not idx is None ) and not( 0<=idx<=dtype.get_length() ):
+
+          raise PyMTLTypeError(
+            s.blk, node.ast, 'bit selection index out of range!' )
+
+        node.Type = node.value.Type.get_next_dim_type()
+
+      elif isinstance( dtype, Vector ):
+
+        if ( not idx is None ) and not( 0<=idx<=dtype.get_length() ):
+
+          raise PyMTLTypeError(
+            s.blk, node.ast, 'bit selection index out of range!' )
+
+        node.Type = Wire( Vector( 1 ) )
+
+      else:
+
+        raise PyMTLTypeError(
+          s.blk, node.ast, 'cannot perform index on {}!'.format(dtype) )
 
     else:
 
       raise PyMTLTypeError(
         s.blk, node.ast, 'cannot perform index on {}!'.format(
-          node.value.Type
-      ) )
+          node.value.Type ) )
 
   #-----------------------------------------------------------------------
   # visit_Slice
@@ -283,8 +304,7 @@ class BehavioralRTLIRTypeCheckVisitorL1( BehavioralRTLIRNodeVisitor ):
 
       raise PyMTLTypeError(
         s.blk, node.ast, 'cannot perform slicing on type {}!'.format(
-          node.value.Type
-      ) )
+          node.value.Type ) )
 
     if not lower_val is None and not upper_val is None:
 
@@ -295,20 +315,17 @@ class BehavioralRTLIRTypeCheckVisitorL1( BehavioralRTLIRNodeVisitor ):
       if ( lower_val >= upper_val ):
         raise PyMTLTypeError(
           s.blk, node.ast,
-          'the upper bound of a slice must be larger than the lower bound!'
-        )
+          'the upper bound of a slice must be larger than the lower bound!' )
 
       # upper & lower bound should be less than the bit width of the signal
 
       if not ( 0 <= lower_val < upper_val <= signal_nbits ):
         raise PyMTLTypeError(
-          s.blk, node.ast, 'upper/lower bound of slice out of width of signal!'
-        )
+          s.blk, node.ast, 'upper/lower bound of slice out of width of signal!' )
 
       node.Type = Wire( Vector( upper_val - lower_val ) )
 
     else:
 
       raise PyMTLTypeError(
-        s.blk, node.ast, 'slice bounds must be constant!'
-      )
+        s.blk, node.ast, 'slice bounds must be constant!' )
