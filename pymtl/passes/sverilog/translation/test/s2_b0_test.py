@@ -72,7 +72,7 @@ def test_port_connection1( do_test ):
       return (s.data==o.data) and (s.len_==o.len_) and (s.opaque==o.opaque)\
           and (s.addr==o.addr)
 
-  class TestComponent( RTLComponent ):
+  class TestComponent( Component ):
 
     def construct( s ):
 
@@ -96,7 +96,7 @@ def test_port_connection2( do_test ):
   ReqType = mk_mem_req_msg( 8, 16, 40 )
   RespType = mk_mem_resp_msg( 8, 40 )
 
-  class TestComponent( RTLComponent ):
+  class TestComponent( Component ):
 
     def construct( s ):
 

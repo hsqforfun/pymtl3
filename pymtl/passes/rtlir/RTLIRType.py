@@ -564,13 +564,13 @@ def get_rtlir_type( obj ):
 
   # A Port instance
 
-  elif isinstance( obj, ( pymtl.InVPort, pymtl.OutVPort ) ):
+  elif isinstance( obj, ( pymtl.InPort, pymtl.OutPort ) ):
 
-    if isinstance( obj, pymtl.InVPort ):
+    if isinstance( obj, pymtl.InPort ):
 
       return Port( 'input', get_rtlir_dtype( obj ) )
 
-    elif isinstance( obj, pymtl.OutVPort ):
+    elif isinstance( obj, pymtl.OutPort ):
 
       return Port( 'output', get_rtlir_dtype( obj ) )
 
@@ -612,7 +612,7 @@ def get_rtlir_type( obj ):
 
   # Component instances
 
-  elif isinstance( obj, pymtl.RTLComponent ):
+  elif isinstance( obj, pymtl.Component ):
 
     # Collect all attributes of `obj`
 

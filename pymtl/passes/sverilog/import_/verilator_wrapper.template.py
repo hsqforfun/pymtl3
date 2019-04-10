@@ -17,7 +17,7 @@ def get_bit_slice( num, start, stop ):
 #-------------------------------------------------------------------------
 # {top_name}
 #-------------------------------------------------------------------------
-class {top_name}( RTLComponent ):
+class {top_name}( Component ):
   id_ = 0
 
   def __init__( s ):

@@ -51,7 +51,7 @@ def local_do_test( m ):
 
 def test_port_connection1( do_test ):
 
-  class TestComponent( RTLComponent ):
+  class TestComponent( Component ):
     
     def construct( s ):
 
@@ -109,7 +109,7 @@ def test_port_connection1( do_test ):
 
 def test_port_connection2( do_test ):
 
-  class TestComponent( RTLComponent ):
+  class TestComponent( Component ):
     def construct( s ):
       s.in_ = InVPort( Bits16 )
       s.out = OutVPort( Bits16 )
@@ -126,7 +126,7 @@ def test_port_connection2( do_test ):
 
 def test_port_connection3( do_test ):
 
-  class TestComponent( RTLComponent ):
+  class TestComponent( Component ):
     
     def construct( s ):
 
@@ -148,7 +148,7 @@ def test_port_connection3( do_test ):
 
 def test_port_connection4( do_test ):
 
-  class TestComponent( RTLComponent ):
+  class TestComponent( Component ):
     
     def construct( s ):
 
@@ -201,7 +201,7 @@ def test_port_connection4( do_test ):
 
 def test_port_connection5( do_test ):
 
-  class TestComponent( RTLComponent ):
+  class TestComponent( Component ):
     
     def construct( s ):
 
@@ -235,7 +235,7 @@ def test_port_connection6( do_test ):
   # Verilator does not allow bit indexing/slicing on a single bit
   # Translation framework will throw an exception
 
-  class TestComponent( RTLComponent ):
+  class TestComponent( Component ):
     
     def construct( s ):
 
@@ -269,7 +269,7 @@ def test_port_connection6( do_test ):
 def test_port_connection7( do_test ):
   # Verilator does not allow bit indexing/slicing on a single bit
 
-  class TestComponent( RTLComponent ):
+  class TestComponent( Component ):
     
     def construct( s ):
 

@@ -1,7 +1,7 @@
 #=========================================================================
 # RTLIRTranslator.py
 #=========================================================================
-# A framework for translating a PyMTL RTLComponent into arbitrary backend
+# A framework for translating a PyMTL Component into arbitrary backend
 # by calling user-defined translation callbacks.
 #
 # Author : Peitian Pan

@@ -95,7 +95,7 @@ def test_bypass_queue( do_test ):
 #-------------------------------------------------------------------------
 
 def test_regincr( do_test ):
-  class RegIncr( RTLComponent ):
+  class RegIncr( Component ):
     def construct( s, width ):
       s.in_     = InVPort   ( width )
       s.out     = OutVPort  ( width )
@@ -132,7 +132,7 @@ def test_regincr( do_test ):
 #-------------------------------------------------------------------------
 
 def test_regincr_2stage( do_test ):
-  class RegIncr( RTLComponent ):
+  class RegIncr( Component ):
     def construct( s, width ):
       s.in_     = InVPort   ( width )
       s.out     = OutVPort  ( width )
@@ -149,7 +149,7 @@ def test_regincr_2stage( do_test ):
       def update_inc():
         s.out = s.reg_out + width( 1 )
 
-  class RegIncr2( RTLComponent ):
+  class RegIncr2( Component ):
     def construct( s, width ):
       s.in_     = InVPort   ( width )
       s.out     = OutVPort  ( width )
@@ -181,7 +181,7 @@ def test_regincr_2stage( do_test ):
 #-------------------------------------------------------------------------
 
 def test_regincr_n_stage( do_test ):
-  class RegIncr( RTLComponent ):
+  class RegIncr( Component ):
     def construct( s, width ):
       s.in_     = InVPort   ( width )
       s.out     = OutVPort  ( width )
@@ -198,7 +198,7 @@ def test_regincr_n_stage( do_test ):
       def update_inc():
         s.out = s.reg_out + width( 1 )
 
-  class RegIncrN( RTLComponent ):
+  class RegIncrN( Component ):
     def construct( s, width, nstages ):
       s.in_     = InVPort   ( width )
       s.out     = OutVPort  ( width )
@@ -245,7 +245,7 @@ def test_regincr_n_stage( do_test ):
 def test_sort( do_test ):
   from pclib.rtl.registers import Reg, RegRst 
 
-  class MinMaxUnit( RTLComponent ):
+  class MinMaxUnit( Component ):
     def construct( s, width ):
       s.in0       = InVPort   ( width )
       s.in1       = InVPort   ( width )
@@ -261,7 +261,7 @@ def test_sort( do_test ):
           s.out_min = s.in1
           s.out_max = s.in0
 
-  class Sort( RTLComponent ):
+  class Sort( Component ):
     def construct( s, width ):
       s.in_val    = InVPort   ( Bits1 )
       s.out_val   = OutVPort  ( Bits1 )
@@ -407,7 +407,7 @@ def test_gcd( do_test ):
   B_MUX_SEL_IN  = 1
   B_MUX_SEL_X   = 0
 
-  class GcdUnitDpath( RTLComponent ):
+  class GcdUnitDpath( Component ):
     def construct( s ):
       s.req_msg_a = InVPort( Bits16 )
       s.req_msg_b = InVPort( Bits16 )
@@ -455,7 +455,7 @@ def test_gcd( do_test ):
         out = ( s.resp_msg, s.sub_out ),
       )
 
-  class GcdUnitCtrl( RTLComponent ):
+  class GcdUnitCtrl( Component ):
     def construct( s ):
       s.req_val  = InVPort( Bits1 )
       s.req_rdy  = OutVPort( Bits1 )
@@ -530,7 +530,7 @@ def test_gcd( do_test ):
           s.a_reg_en  = Bits1( 0 )
           s.b_reg_en  = Bits1( 0 )
 
-  class GcdUnit( RTLComponent ):
+  class GcdUnit( Component ):
 
     def construct( s ):
 

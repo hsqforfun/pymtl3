@@ -118,7 +118,7 @@ def gen_test_harness(
     dut, inport_types, outport_types, input_val, output_val
   ):
 
-  class TestHarness( RTLComponent ):
+  class TestHarness( Component ):
 
     def construct( s, dut, inport_types, outport_types, input_val, output_val ):
 
@@ -253,7 +253,7 @@ def run_translation_reference_test(
 
 def gen_sim_reference( model, input_data, outport_types ):
 
-  class RecordTestSink( RTLComponent ):
+  class RecordTestSink( Component ):
 
     def construct( s, Type ):
 
@@ -289,7 +289,7 @@ def gen_sim_reference( model, input_data, outport_types ):
   # Simulate the model to generate reference output
   #-----------------------------------------------------------------------
 
-  class SimulationTH( RTLComponent ):
+  class SimulationTH( Component ):
 
     def construct( s, dut, inport_types, outport_types, input_val ):
 

@@ -380,7 +380,7 @@ def S1_B0_ComponentStrategy( draw ):
 """
 from pymtl import *
 
-class TestComponent( RTLComponent ):
+class TestComponent( Component ):
   
   def construct( s ):
 

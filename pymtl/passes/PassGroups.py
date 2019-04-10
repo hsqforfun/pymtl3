@@ -23,11 +23,11 @@ def SimpleSchedDumpDAGPass():
   return currying
 
 SimpleSimDumpDAG = [
-  RTLComponent.elaborate,
+  Component.elaborate,
   GenDAGPass(),
   SimpleSchedDumpDAGPass(),
   SimpleTickPass(),
-  RTLComponent.lock_in_simulation
+  Component.lock_in_simulation
 ]
 
 #-------------------------------------------------------------------------
@@ -38,7 +38,7 @@ SimpleSimNoElaboration = [
   GenDAGPass(),
   SimpleSchedPass(),
   SimpleTickPass(),
-  RTLComponent.lock_in_simulation
+  Component.lock_in_simulation
 ]
 
 #-------------------------------------------------------------------------

@@ -64,7 +64,7 @@ def test_ifc_connection1( do_test ):
      interface port!
   """
 
-  class TestComponent( RTLComponent ):
+  class TestComponent( Component ):
 
     def construct( s ):
 

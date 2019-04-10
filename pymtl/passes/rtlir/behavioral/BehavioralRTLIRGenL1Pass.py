@@ -309,9 +309,9 @@ class BehavioralRTLIRGeneratorL1( ast.NodeVisitor ):
       # free var from closure
       obj = s.closure[ node.id ]
 
-      if isinstance( obj, RTLComponent ):
+      if isinstance( obj, Component ):
         # Component freevars are an L1 thing.
-        assert isinstance( obj, RTLComponent ) and (obj is s.component),\
+        assert isinstance( obj, Component ) and (obj is s.component),\
             "Component {} is not a sub-component of {}!".format(
                 obj, s.component
             )

@@ -37,7 +37,7 @@ def local_do_test( m ):
 #-------------------------------------------------------------------------
 
 def test_index_basic( do_test ):
-  class index_basic( RTLComponent ):
+  class index_basic( Component ):
     def construct( s ):
       s.in_ = [ InVPort( Bits16 ) for _ in xrange( 4 ) ]
       s.out = [ OutVPort( Bits16 ) for _ in xrange( 2 ) ]
@@ -74,7 +74,7 @@ def test_index_basic( do_test ):
 #-------------------------------------------------------------------------
 
 def test_mismatch_width_assign( do_test ):
-  class A( RTLComponent ):
+  class A( Component ):
     def construct( s ):
       s.in_ = InVPort( Bits16 )
       s.out = OutVPort( Bits8 )
@@ -109,7 +109,7 @@ def test_mismatch_width_assign( do_test ):
 #-------------------------------------------------------------------------
 
 def test_slicing_basic( do_test ):
-  class slicing_basic( RTLComponent ):
+  class slicing_basic( Component ):
     def construct( s ):
       s.in_ = InVPort( Bits32 )
       s.out = OutVPort( Bits64 )
@@ -146,7 +146,7 @@ def test_slicing_basic( do_test ):
 #-------------------------------------------------------------------------
 
 def test_bits_basic( do_test ):
-  class bits_basic( RTLComponent ):
+  class bits_basic( Component ):
     def construct( s ):
       s.in_ = InVPort( Bits16 )
       s.out = OutVPort( Bits16 )
@@ -179,7 +179,7 @@ def test_bits_basic( do_test ):
 #-------------------------------------------------------------------------
 
 def test_index_bits_slicing( do_test ):
-  class index_bits_slicing( RTLComponent ):
+  class index_bits_slicing( Component ):
     def construct( s ):
       s.in_ = [ InVPort( Bits16 ) for _ in xrange( 10 ) ]
       s.out = [ OutVPort( Bits16 ) for _ in xrange( 5 ) ]
@@ -237,7 +237,7 @@ def test_index_bits_slicing( do_test ):
 #-------------------------------------------------------------------------
 
 def test_multi_components( do_test ):
-  class multi_components_B( RTLComponent ):
+  class multi_components_B( Component ):
     def construct( s ):
       s.in_ = InVPort( Bits16 )
       s.out = OutVPort( Bits16 )
@@ -246,7 +246,7 @@ def test_multi_components( do_test ):
       def multi_components_B():
         s.out = s.in_
 
-  class multi_components_A( RTLComponent ):
+  class multi_components_A( Component ):
     def construct( s ):
       s.in_ = InVPort( Bits16 )
       s.out = OutVPort( Bits16 )
@@ -288,7 +288,7 @@ def test_multi_components( do_test ):
 #-------------------------------------------------------------------------
 
 def test_if_basic( do_test ):
-  class if_basic( RTLComponent ):
+  class if_basic( Component ):
     def construct( s ):
       s.in_ = InVPort( Bits16 )
       s.out = OutVPort( Bits8 )
@@ -325,7 +325,7 @@ def test_if_basic( do_test ):
 #-------------------------------------------------------------------------
 
 def test_for_basic( do_test ):
-  class for_basic( RTLComponent ):
+  class for_basic( Component ):
     def construct( s ):
       s.in_ = InVPort( Bits16 )
       s.out = OutVPort( Bits8 )
@@ -366,7 +366,7 @@ def test_for_basic( do_test ):
 #-------------------------------------------------------------------------
 
 def test_multi_upblks( do_test ):
-  class multi_upblks( RTLComponent ):
+  class multi_upblks( Component ):
     def construct( s ):
       s.in_ = InVPort( Bits4 )
       s.out = OutVPort( Bits8 )

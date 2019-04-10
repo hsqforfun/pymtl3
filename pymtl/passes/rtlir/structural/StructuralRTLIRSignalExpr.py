@@ -484,7 +484,7 @@ def gen_signal_expr( signal ):
 
     base_comp = base_comp._dsl.parent_obj
 
-  assert isinstance( base_comp, pymtl.RTLComponent )
+  assert isinstance( base_comp, pymtl.Component )
 
   # Start from the base component and process one operation per iteration
 

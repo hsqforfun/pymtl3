@@ -56,7 +56,7 @@ def test_struct_inport( do_test ):
       msg.bar = msg.bar( bar )
       return msg
 
-  class struct_inport( RTLComponent ):
+  class struct_inport( Component ):
     def construct( s, n_foo, n_bar ):
       s.in_ = InVPort( struct_fields )
       s.out = OutVPort( mk_bits( n_foo + n_bar ) )
@@ -101,7 +101,7 @@ def test_composite_port( do_test ):
       
       s._pack_order = [ 'val0', 'val1' ]
 
-  class composite_port( RTLComponent ):
+  class composite_port( Component ):
     def construct( s, num_port ):
       s.in_ = [ InVPort( val_bundle ) for _ in xrange( num_port ) ]
       s.out = [ OutVPort( Bits32 ) for _ in xrange( num_port ) ]

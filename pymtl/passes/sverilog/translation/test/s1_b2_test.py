@@ -63,7 +63,7 @@ def local_do_test( m ):
 
 def test_upblk_if1( do_test ):
 
-  class TestComponent( RTLComponent  ):
+  class TestComponent( Component  ):
 
     def construct( s ):
 
@@ -126,7 +126,7 @@ def test_upblk_if1( do_test ):
 
 def test_upblk_assign2( do_test ):
 
-  class TestComponent( RTLComponent  ):
+  class TestComponent( Component  ):
 
     def construct( s ):
       
