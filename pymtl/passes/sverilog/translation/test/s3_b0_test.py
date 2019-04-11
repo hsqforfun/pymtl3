@@ -59,10 +59,6 @@ def local_do_test( m ):
   del m
 
 def test_ifc_connection1( do_test ):
-  """
-     This test cannot be verilated at L3: the top component cannot have an
-     interface port!
-  """
 
   class TestComponent( Component ):
 

@@ -39,7 +39,7 @@ class BehavioralRTLIRToSVVisitorL4( BehavioralRTLIRToSVVisitorL3 ):
       value = s.visit( node.value )
       attr = node.attr
 
-      return '{value}.{attr}'.format( **locals() )
+      return '{value}_{attr}'.format( **locals() )
 
     else:
 

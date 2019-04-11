@@ -16,66 +16,6 @@ class StructuralRTLIRGenL3Pass( StructuralRTLIRGenL2Pass ):
 
     super( StructuralRTLIRGenL3Pass, s ).__call__( top )
 
-    s.gen_interfaces( top )
-
-  #-----------------------------------------------------------------------
-  # collect_all_interfaces
-  #-----------------------------------------------------------------------
-
-  def collect_ifcs( s, m_rtype ):
-
-    return m_rtype.get_ifc_views_packed()
-
-  #-----------------------------------------------------------------------
-  # gen_interfaces
-  #-----------------------------------------------------------------------
-  # Figure out the interfaces that each interface view belongs to.
-
-  def gen_interfaces( s, top ):
-
-    ifcs = []
-    view2ifc = {}
-    top_views = s.collect_ifcs( top._pass_structural_rtlir_gen.rtlir_type )
-
-    for idx, ( view_name, rtype ) in enumerate( top_views ):
-
-      view_rtype = rtype.get_sub_type() if isinstance(rtype, Array)\
-              else rtype
-
-      view2ifc[ view_name ] =\
-          ( Interface( '_TmpIfc'+str(idx), [ view_rtype ] ), view_rtype )
-
-    # Group all the views that do not conflict with each other into the
-    # same interface
-
-    for idx, ( view_name, rtype ) in enumerate( top_views[:-1] ):
-
-      view_rtype = rtype.get_sub_type() if isinstance(rtype, Array)\
-              else rtype
-
-      for _view_name, _rtype in top_views[ idx+1: ]:
-
-        _view_rtype = _rtype.get_sub_type() if isinstance(_rtype, Array)\
-                 else _rtype
-
-        if view2ifc[ view_name ][0].can_add_view( _view_rtype ):
-
-          view2ifc[ _view_name ] =\
-            ( view2ifc[ view_name ][0], _view_rtype )
-
-          view2ifc[ view_name ][0].add_view( _view_rtype )
-
-    for view_name, ( ifc_rtype, view_rtype ) in view2ifc.iteritems():
-
-      view_rtype._set_interface( ifc_rtype )
-
-      if not ifc_rtype in ifcs:
-
-        ifc_rtype._set_name( 'Interface'+str(len( ifcs )) )
-        ifcs.append( ifc_rtype )
-
-    top._pass_structural_rtlir_gen.ifcs = ifcs
-
   #-----------------------------------------------------------------------
   # contains
   #-----------------------------------------------------------------------

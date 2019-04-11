@@ -28,7 +28,7 @@ def verilog_name( name ):
 
 def verilator_name( name ):
 
-  return verilog_name(name).replace('_$', '___024')
+  return verilog_name(name).replace('__', '___05F').replace('$', '__024')
 
 #-------------------------------------------------------------------------
 # pymtl_name
@@ -37,6 +37,19 @@ def verilator_name( name ):
 def pymtl_name( name ):
 
   return name
+
+#-------------------------------------------------------------------------
+# gen_name_port_list
+#-------------------------------------------------------------------------
+
+def gen_name_port_list( ports, ifcs ):
+  ret = ports
+  for name, ifc in ifcs:
+    assert isinstance( ifc, InterfaceView )
+    ret += map(
+      lambda ( id_, rtype ): ( verilog_name( name )+'_'+id_, rtype ),
+      ifc.get_all_ports_packed() )
+  return ret
 
 #-------------------------------------------------------------------------
 # get_nbits
@@ -217,7 +230,7 @@ def get_struct_objects( port_objs ):
 
   for port_obj in port_objs:
 
-    rtype = get_rtlir_type( port_obj )
+    rtype = get_rtlir( port_obj )
     assert isinstance( rtype, Port )
     dtype = rtype.get_dtype()
 
@@ -334,7 +347,7 @@ def read_ffi_model_py( lhs, rhs, name, dtype ):
 
   ret = []
 
-  rname = pymtl_name( name )
+  rname = verilator_name( name )
   vec_list = flatten_packed_dtype( name, dtype )
   vec_list.reverse()
 
@@ -462,7 +475,7 @@ def write_ffi_model_py( lhs, rhs, name, dtype ):
         'int('+cur_vec_list[0][0]+')' )
 
       ret.append(
-        (lhs+'='+rhs_str).format( name = pymtl_name(name)+'[{}]'.format(lhs_pos) )
+        (lhs+'='+rhs_str).format( name = verilator_name(name)+'[{}]'.format(lhs_pos) )
       )
 
       lhs_pos += 1
@@ -476,7 +489,7 @@ def write_ffi_model_py( lhs, rhs, name, dtype ):
       'int('+cur_vec_list[0][0]+')' )
 
     ret.append(
-      (lhs+'='+rhs_str).format(name = pymtl_name(name)+'[{}]'.format(lhs_pos))
+      (lhs+'='+rhs_str).format(name = verilator_name(name)+'[{}]'.format(lhs_pos))
     )
 
   return ret
@@ -684,7 +697,7 @@ def generate_internal_line_trace_py( ports ):
   ret = [ 'lt = ""' ]
 
   for name, port in ports:
-    my_name = pymtl_name( name )
+    my_name = verilator_name( name )
     ret.append(
       'lt += "{my_name} = {{}}, ".format(s._ffi_m.{my_name}[0])'.\
         format(**locals())

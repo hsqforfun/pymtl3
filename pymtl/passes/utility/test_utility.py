@@ -111,6 +111,19 @@ def gen_translation_pass( mk_pass, mk_backend_trans, structural_level,
   return mk_pass( _backend_translators[ label ] )
 
 #-------------------------------------------------------------------------
+# port_name_mangle
+#-------------------------------------------------------------------------
+
+def port_name_mangle( values, import_pass ):
+  assert hasattr( import_pass, 'port_name_mangle' ),\
+    'import pass {} does not have `port_name_mangle` method!'.format(
+        import_pass )
+  ret = {}
+  for name, value in values.iteritems():
+    ret[ import_pass.port_name_mangle( name ) ] = value
+  return ret
+
+#-------------------------------------------------------------------------
 # gen_test_harness
 #-------------------------------------------------------------------------
 
@@ -211,7 +224,8 @@ def run_translation_reference_test(
 
   model.elaborate()
   model.apply( TranslationPass() )
-  model.apply( ImportPass() )
+  import_pass = ImportPass()
+  model.apply( import_pass )
 
   dut = model._pass_simple_import.imported_model
 
@@ -235,7 +249,11 @@ def run_translation_reference_test(
   # dut = model._pass_simple_import.imported_model
 
   test_harness =\
-    gen_test_harness( dut, inport_types, outport_types, input_val, output_val )
+    gen_test_harness( dut,
+        port_name_mangle( inport_types, import_pass ),
+        port_name_mangle( outport_types, import_pass ),
+        port_name_mangle( input_val, import_pass ),
+        port_name_mangle( output_val, import_pass ) )
 
   #-----------------------------------------------------------------------
   # Run the simulation
@@ -257,7 +275,7 @@ def gen_sim_reference( model, input_data, outport_types ):
 
     def construct( s, Type ):
 
-      s.in_ = InVPort( Type )
+      s.in_ = InPort( Type )
       s.record = []
 
       @s.update
@@ -354,12 +372,17 @@ def run_sim_reference_test(
 
   model.elaborate()
   model.apply( TranslationPass() )
-  model.apply( ImportPass() )
+  import_pass = ImportPass()
+  model.apply( import_pass )
 
   dut = model._pass_simple_import.imported_model
 
   trans_th =\
-    gen_test_harness( dut, inport_types, outport_types, input_val, output_val )
+    gen_test_harness( dut,
+        port_name_mangle( inport_types, import_pass ),
+        port_name_mangle( outport_types, import_pass ),
+        port_name_mangle( input_val, import_pass ),
+        port_name_mangle( output_val, import_pass ) )
 
   #-----------------------------------------------------------------------
   # Run the simulation

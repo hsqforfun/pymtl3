@@ -508,11 +508,50 @@ class Component( BaseRTLIRType ):
   def get_all_properties( s ): return s.properties
 
 #-------------------------------------------------------------------------
-# get_rtlir_type
+# can_convert_to_rtlir
+#-------------------------------------------------------------------------
+
+def can_convert_to_rtlir( obj ):
+
+  pymtl_constructs = (
+    pymtl.InPort, pymtl.OutPort, pymtl.Wire, pymtl.Bits, pymtl.Interface,
+    pymtl.Component
+  )
+
+  if isinstance( obj, list ):
+    while isinstance( obj, list ):
+      assert len( obj ) > 0
+      obj = obj[0]
+    return can_convert_to_rtlir( obj )
+
+  elif isinstance( obj, pymtl_constructs ):
+    return True
+
+  elif isinstance( obj, int ):
+    return True
+  
+  else: return False
+
+#-------------------------------------------------------------------------
+# get_rtlir
 #-------------------------------------------------------------------------
 # generate the RTLIR instance of the given object
 
-def get_rtlir_type( obj ):
+def get_rtlir( obj ):
+
+  def can_convert_to_ifc_rtlir( obj ):
+
+    pymtl_ports = ( pymtl.InPort, pymtl.OutPort )
+
+    if isinstance( obj, list ):
+      while isinstance( obj, list ):
+        assert len( obj ) > 0
+        obj = obj[0]
+      return can_convert_to_ifc_rtlir( obj )
+
+    elif isinstance( obj, pymtl_ports ): return True
+
+    else: return False
 
   def unpack( id_, Type ):
 
@@ -543,13 +582,12 @@ def get_rtlir_type( obj ):
       properties[ _id ] = _Type
 
   # A list of instances
-
   if isinstance( obj, list ):
 
     assert len( obj ) > 0
-    ref_type = get_rtlir_type( obj[0] )
+    ref_type = get_rtlir( obj[0] )
     assert\
-      reduce( lambda res,i: res and (get_rtlir_type(i)==ref_type),obj ),\
+      reduce( lambda res,i: res and (get_rtlir(i)==ref_type),obj ),\
       'all elements of array {} must have the same type {}!'.format(
         obj, ref_type )
     dim_sizes = []
@@ -560,10 +598,9 @@ def get_rtlir_type( obj ):
       dim_sizes.append( len( obj ) )
       obj = obj[0]
 
-    return Array( dim_sizes, get_rtlir_type( obj ) )
+    return Array( dim_sizes, get_rtlir( obj ) )
 
   # A Port instance
-
   elif isinstance( obj, ( pymtl.InPort, pymtl.OutPort ) ):
 
     if isinstance( obj, pymtl.InPort ):
@@ -577,26 +614,25 @@ def get_rtlir_type( obj ):
     else: assert False
 
   # A Wire instance
-
   elif isinstance( obj, pymtl.Wire ):
 
     return Wire( get_rtlir_dtype( obj ) )
 
   # A Constant instance
-
   elif isinstance( obj, ( int, pymtl.Bits ) ):
 
     return Const( get_rtlir_dtype( obj ) )
 
-  # Interface view instances
-
+  # An Interface view instance
   elif isinstance( obj, pymtl.Interface ):
 
     properties = {}
 
     for _id, _obj in collect_objs( obj, object, True ):
 
-      _obj_type = get_rtlir_type( _obj )
+      if not can_convert_to_ifc_rtlir( _obj ): continue
+
+      _obj_type = get_rtlir( _obj )
       properties[ _id ] = _obj_type
 
       if not is_of_type( _obj_type, ( Port ) ):
@@ -610,8 +646,7 @@ def get_rtlir_type( obj ):
 
     return InterfaceView( obj.__class__.__name__, properties )
 
-  # Component instances
-
+  # A Component instance
   elif isinstance( obj, pymtl.Component ):
 
     # Collect all attributes of `obj`
@@ -620,7 +655,10 @@ def get_rtlir_type( obj ):
 
     for _id, _obj in collect_objs( obj, object, True ):
 
-      _obj_type = get_rtlir_type( _obj )
+      # Untranslatable attributes will be ignored
+      if not can_convert_to_rtlir( _obj ): continue
+
+      _obj_type = get_rtlir( _obj )
       properties[ _id ] = _obj_type
 
       if isinstance( _obj_type, Array ):

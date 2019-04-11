@@ -84,6 +84,11 @@ class BehavioralRTLIRTypeCheckVisitorL2( BehavioralRTLIRTypeCheckVisitorL1 ):
     s.type_expect[ 'If' ] = {
       'cond' : ( Signal, 'the condition of if must be a signal!' )
     }
+    s.type_expect[ 'IfExp' ] = {
+      'cond' : ( Signal, 'the condition of if-exp must be a signal!' ),
+      'body' : ( Signal, 'the body of if-exp must be a signal!' ),
+      'orelse' : ( Signal, 'the else branch of if-exp must be a signal!' )
+    }
 
   #-----------------------------------------------------------------------
   # eval_const_binop
@@ -196,7 +201,7 @@ class BehavioralRTLIRTypeCheckVisitorL2( BehavioralRTLIRTypeCheckVisitorL1 ):
 
   def visit_IfExp( s, node ):
     # Can the type of condition be cast into bool?
-    if not Bool()( node.cond.Type ):
+    if not Bool()( node.cond.Type.get_dtype() ):
       raise PyMTLTypeError(
         s.blk, node.ast, 'the condition of "if-exp" cannot be converted to bool!'
       )

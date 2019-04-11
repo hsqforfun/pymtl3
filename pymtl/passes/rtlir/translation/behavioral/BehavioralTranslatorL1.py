@@ -5,7 +5,7 @@
 # Author : Peitian Pan
 # Date   : March 22, 2019
 
-from pymtl.passes.rtlir import get_rtlir_type
+from pymtl.passes.rtlir import get_rtlir
 
 from pymtl.passes.rtlir.behavioral.BehavioralRTLIRGenL1Pass\
     import BehavioralRTLIRGenL1Pass
@@ -81,7 +81,7 @@ class BehavioralTranslatorL1( BehavioralTranslatorL0 ):
 
     for name, fvar in s.behavioral.freevars[m].iteritems():
 
-      rtype = get_rtlir_type( fvar )
+      rtype = get_rtlir( fvar )
       if isinstance( rtype, Array ):
         fvar_rtype = rtype.get_sub_type()
         array_rtype = rtype

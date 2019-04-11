@@ -36,75 +36,7 @@ class StructuralTranslatorL3( StructuralTranslatorL2 ):
   # Override
   def translate_structural( s, top ):
 
-    # Declarations
-
     s.structural.decl_ifcs = {}
-
-    # Translate the definition of interfaces
-
-    def_ifcs = []
-
-    for ifc in top._pass_structural_rtlir_gen.ifcs:
-
-      # Translate the interface wires ( not a specific view )
-
-      interface_wires = []
-
-      for wire_id, rtype in ifc.get_all_wires_packed():
-
-        if isinstance( rtype, Array ):
-          array_rtype = rtype
-          wire_rtype = rtype.get_sub_type()
-        else:
-          array_rtype = None
-          wire_rtype = rtype
-
-        interface_wires.append(
-          s.rtlir_tr_interface_wire_decl(
-            s.rtlir_tr_var_id( wire_id ),
-            wire_rtype,
-            s.rtlir_tr_unpacked_array_type( array_rtype ),
-            s.rtlir_data_type_translation( top, wire_rtype.get_dtype() )
-        ) )
-
-      ifc_wires = s.rtlir_tr_interface_wire_decls( interface_wires )
-
-      # Translate the interface views
-
-      interface_views = []
-
-      for view in ifc.get_all_views():
-
-        port_decls = []
-
-        # Translate the direction of each port
-
-        for port_id, rtype in view.get_all_ports_packed():
-
-          if isinstance( rtype, Array ):
-            array_rtype = rtype
-            port_rtype = rtype.get_sub_type()
-          else:
-            array_rtype = None
-            port_rtype = rtype
-
-          port_decls.append(
-            s.rtlir_tr_interface_view_port_direction(
-              s.rtlir_tr_var_id( port_id ),
-              port_rtype,
-              s.rtlir_tr_unpacked_array_type( array_rtype )
-            ) )
-
-        interface_views.append( s.rtlir_tr_interface_view_decl(
-          view, s.rtlir_tr_interface_view_port_directions( port_decls ) ) )
-
-      # Append tuple ( InterfaceRType, InterfaceDef ) to the result array
-
-      def_ifcs.append( ( ifc, s.rtlir_tr_interface_def(
-        ifc, ifc_wires, s.rtlir_tr_interface_view_decls( interface_views )
-      ) ) )
-
-    s.structural.def_ifcs = def_ifcs
     super( StructuralTranslatorL3, s ).translate_structural( top )
 
   #-----------------------------------------------------------------------
@@ -118,7 +50,7 @@ class StructuralTranslatorL3( StructuralTranslatorL2 ):
 
     # Interfaces
 
-    ifc_decls, ifc_defs = [], []
+    ifc_decls = []
 
     for ifc_id, rtype in m_rtype.get_ifc_views_packed():
 
@@ -129,22 +61,31 @@ class StructuralTranslatorL3( StructuralTranslatorL2 ):
         array_rtype = None
         ifc_rtype = rtype
 
+      ports = []
+      for port_id, p_rtype in ifc_rtype.get_all_ports_packed():
+        if isinstance( p_rtype, Array ):
+          port_array_rtype = p_rtype
+          port_rtype = p_rtype.get_sub_type()
+        else:
+          port_array_rtype = None
+          port_rtype = p_rtype
+
+        ports.append( s.rtlir_tr_interface_port_decl(
+          port_id,
+          port_rtype,
+          s.rtlir_tr_unpacked_array_type( port_array_rtype ),
+          s.rtlir_data_type_translation( m, port_rtype.get_dtype() )
+        ) )
+
       ifc_decls.append(
-        s.rtlir_tr_interface_port_decl(
+        s.rtlir_tr_interface_decl(
           ifc_id,
           ifc_rtype,
-          s.rtlir_tr_unpacked_array_type( array_rtype )
+          s.rtlir_tr_unpacked_array_type( array_rtype ),
+          s.rtlir_tr_interface_port_decls( ports )
       ) )
 
-    s.structural.decl_ifcs[m] = s.rtlir_tr_interface_port_decls( ifc_decls )
-
-    # Verilator limitation: the top component cannot have interface ports
-
-    # if m is s.top and ifc_decls:
-      
-      # assert False, 'top component {} cannot have interface port {}!'.format(
-        # m, ifc_decls
-      # )
+    s.structural.decl_ifcs[m] = s.rtlir_tr_interface_decls( ifc_decls )
 
     super( StructuralTranslatorL3, s ).translate_decls( m )
 
@@ -166,7 +107,7 @@ class StructuralTranslatorL3( StructuralTranslatorL2 ):
 
     elif isinstance( expr, InterfaceViewIndex ):
 
-      return s.rtlir_tr_interface_port_array_index(
+      return s.rtlir_tr_interface_array_index(
         s.rtlir_signal_expr_translation( expr.get_base(), m ),
         expr.get_index() )
 
@@ -178,44 +119,28 @@ class StructuralTranslatorL3( StructuralTranslatorL2 ):
   #-----------------------------------------------------------------------
   # Methods to be implemented by the backend translator
   #-----------------------------------------------------------------------
+  # The methods that are commented out were used to generate SystemVerilog
+  # interface definitions.
 
   # Declarations
 
-  def rtlir_tr_interface_port_decls( s, ifcs ):
+  def rtlir_tr_interface_port_decls( s, port_decls ):
     raise NotImplementedError()
 
-  def rtlir_tr_interface_port_decl( s, ifc_id, ifc_rtype, array_type ):
+  def rtlir_tr_interface_port_decl( s, port_id, port_rtype, port_array_type,
+      port_dtype ):
     raise NotImplementedError()
 
-  def rtlir_tr_interface_view_port_directions( s, directions ):
+  def rtlir_tr_interface_decls( s, ifc_decls ):
     raise NotImplementedError()
 
-  def rtlir_tr_interface_view_port_direction( s, id_, rtype, array_type ):
-    raise NotImplementedError()
-
-  def rtlir_tr_interface_view_decls( s, view_decls ):
-    raise NotImplementedError()
-
-  def rtlir_tr_interface_view_decl( s, view_rtype, directions ):
-    raise NotImplementedError()
-
-  def rtlir_tr_interface_wire_decls( s, wire_decls ):
-    raise NotImplementedError()
-
-  def rtlir_tr_interface_wire_decl( s, id_, rtype, array_type, dtype ):
-    raise NotImplementedError()
-
-  # Definitions
-
-  def rtlir_tr_interface_defs( s, ifc_defs ):
-    raise NotImplementedError()
-
-  def rtlir_tr_interface_def( s, ifc_rtype, wire_defs, view_defs ):
+  def rtlir_tr_interface_decl( s, ifc_id, ifc_rtype, array_type,
+      port_decls ):
     raise NotImplementedError()
 
   # Signal operations
 
-  def rtlir_tr_interface_port_array_index( s, base_signal, index ):
+  def rtlir_tr_interface_array_index( s, base_signal, index ):
     raise NotImplementedError()
 
   def rtlir_tr_interface_attr( s, base_signal, attr ):

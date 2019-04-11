@@ -163,7 +163,7 @@ class BehavioralRTLIRTypeCheckVisitorL1( BehavioralRTLIRNodeVisitor ):
     if not node.name in s.freevars.keys():
       s.freevars[ node.name ] = node.obj
 
-    t = get_rtlir_type( node.obj )
+    t = get_rtlir( node.obj )
 
     if isinstance( t, Const ) and isinstance( t.get_dtype(), Vector ):
 
@@ -180,7 +180,7 @@ class BehavioralRTLIRTypeCheckVisitorL1( BehavioralRTLIRNodeVisitor ):
     # Mark this node as having type Component
     # In L1 the `s` top component is the only possible base
 
-    node.Type = get_rtlir_type( node.base )
+    node.Type = get_rtlir( node.base )
 
     assert isinstance( node.Type, Component )
 
@@ -192,7 +192,7 @@ class BehavioralRTLIRTypeCheckVisitorL1( BehavioralRTLIRNodeVisitor ):
 
     # By default, number literals have bitwidth of 32
 
-    node.Type = get_rtlir_type( node.value )
+    node.Type = get_rtlir( node.value )
     node._value = pymtl.Bits32( node.value )
 
   #-----------------------------------------------------------------------
@@ -253,6 +253,15 @@ class BehavioralRTLIRTypeCheckVisitorL1( BehavioralRTLIRNodeVisitor ):
 
         raise PyMTLTypeError(
           s.blk, node.ast, 'array index out of range!' )
+
+      # Unpacked array index must be a static constant integer!
+      subtype = node.value.Type.get_sub_type()
+      if not isinstance( subtype, ( Port, Wire, Const ) ):
+        if not hasattr( node.value, '_value' ):
+          raise PyMTLTypeError(
+            s.blk, node.ast,\
+'index of unpacked array {} must be a constant integer expression!'.format(
+            node.value ) )
 
       node.Type = node.value.Type.get_next_dim_type()
 

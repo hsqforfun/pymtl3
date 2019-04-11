@@ -17,7 +17,7 @@ from pymtl.passes.utility import collect_objs
 from errors import *
 from ExternalSimSetup import setup_external_sim
 from PyMTLWrapperGen  import generate_py_wrapper
-from helpers import get_struct_objects
+from helpers import get_struct_objects, gen_name_port_list, verilog_name
 
 class SimpleImportPass( BasePass ):
 
@@ -46,8 +46,10 @@ class SimpleImportPass( BasePass ):
 
     # Generate the interface structure
 
-    ports = m_rtype.get_ports_packed()
-    unpacked_ports = m_rtype.get_ports()
+    ports = gen_name_port_list( m_rtype.get_ports_packed(),
+      m_rtype.get_ifc_views() )
+    unpacked_ports = gen_name_port_list( m_rtype.get_ports(),
+      m_rtype.get_ifc_views() )
 
     port_objs = sorted(
       model.get_input_value_ports() | model.get_output_value_ports(),
@@ -102,3 +104,9 @@ class SimpleImportPass( BasePass ):
     model._pass_simple_import.\
       imported_model.construct.__globals__.update(
         get_struct_objects( port_objs ) )
+
+  def port_name_mangle( s, name ):
+    attr_pos = name.find( '.' )
+    if attr_pos == -1: return name
+    assert attr_pos != len( name )-1, 'invalid port name {}'.format( name )
+    return verilog_name( name[0:attr_pos] ) + '_' + name[attr_pos+1:]

@@ -268,7 +268,7 @@ class BehavioralRTLIRToSVVisitorL1( BehavioralRTLIRNodeVisitor ):
     if isinstance( Type, Array ):
       subtype = Type.get_sub_type()
 
-      if isinstance( subtype, ( Port, Wire, Const, InterfaceView ) ):
+      if isinstance( subtype, ( Port, Wire, Const ) ):
         return '{value}[{idx}]'.format( **locals() )
 
       else:

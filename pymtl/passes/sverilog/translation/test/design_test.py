@@ -97,8 +97,8 @@ def test_bypass_queue( do_test ):
 def test_regincr( do_test ):
   class RegIncr( Component ):
     def construct( s, width ):
-      s.in_     = InVPort   ( width )
-      s.out     = OutVPort  ( width )
+      s.in_     = InPort   ( width )
+      s.out     = OutPort  ( width )
       s.reg_out = Wire      ( width )
 
       @s.update_on_edge
@@ -134,8 +134,8 @@ def test_regincr( do_test ):
 def test_regincr_2stage( do_test ):
   class RegIncr( Component ):
     def construct( s, width ):
-      s.in_     = InVPort   ( width )
-      s.out     = OutVPort  ( width )
+      s.in_     = InPort   ( width )
+      s.out     = OutPort  ( width )
       s.reg_out = Wire      ( width )
 
       @s.update_on_edge
@@ -151,8 +151,8 @@ def test_regincr_2stage( do_test ):
 
   class RegIncr2( Component ):
     def construct( s, width ):
-      s.in_     = InVPort   ( width )
-      s.out     = OutVPort  ( width )
+      s.in_     = InPort   ( width )
+      s.out     = OutPort  ( width )
 
       s.reg1_out = Wire     ( width ) 
 
@@ -183,8 +183,8 @@ def test_regincr_2stage( do_test ):
 def test_regincr_n_stage( do_test ):
   class RegIncr( Component ):
     def construct( s, width ):
-      s.in_     = InVPort   ( width )
-      s.out     = OutVPort  ( width )
+      s.in_     = InPort   ( width )
+      s.out     = OutPort  ( width )
       s.reg_out = Wire      ( width )
 
       @s.update_on_edge
@@ -200,8 +200,8 @@ def test_regincr_n_stage( do_test ):
 
   class RegIncrN( Component ):
     def construct( s, width, nstages ):
-      s.in_     = InVPort   ( width )
-      s.out     = OutVPort  ( width )
+      s.in_     = InPort   ( width )
+      s.out     = OutPort  ( width )
 
       s.reg_out = [ Wire( width ) for x in xrange(nstages+1)]
 
@@ -247,10 +247,10 @@ def test_sort( do_test ):
 
   class MinMaxUnit( Component ):
     def construct( s, width ):
-      s.in0       = InVPort   ( width )
-      s.in1       = InVPort   ( width )
-      s.out_min   = OutVPort  ( width )
-      s.out_max   = OutVPort  ( width )
+      s.in0       = InPort   ( width )
+      s.in1       = InPort   ( width )
+      s.out_min   = OutPort  ( width )
+      s.out_max   = OutPort  ( width )
 
       @s.update
       def output_update():
@@ -263,10 +263,10 @@ def test_sort( do_test ):
 
   class Sort( Component ):
     def construct( s, width ):
-      s.in_val    = InVPort   ( Bits1 )
-      s.out_val   = OutVPort  ( Bits1 )
-      s.in_       = [ InVPort( width ) for x in xrange(4) ]
-      s.out       = [ OutVPort( width ) for x in xrange(4) ]
+      s.in_val    = InPort   ( Bits1 )
+      s.out_val   = OutPort  ( Bits1 )
+      s.in_       = [ InPort( width ) for x in xrange(4) ]
+      s.out       = [ OutPort( width ) for x in xrange(4) ]
 
       #-------------------------------------------------------------------
       # Stage S0 -> S1 pipeline registers
@@ -409,15 +409,15 @@ def test_gcd( do_test ):
 
   class GcdUnitDpath( Component ):
     def construct( s ):
-      s.req_msg_a = InVPort( Bits16 )
-      s.req_msg_b = InVPort( Bits16 )
-      s.resp_msg  = OutVPort( Bits16 )
-      s.a_mux_sel = InVPort( Bits2 )
-      s.a_reg_en  = InVPort( Bits1 )
-      s.b_mux_sel = InVPort( Bits1 )
-      s.b_reg_en  = InVPort( Bits1 )
-      s.is_b_zero = OutVPort( Bits1 )
-      s.is_a_lt_b = OutVPort( Bits1 )
+      s.req_msg_a = InPort( Bits16 )
+      s.req_msg_b = InPort( Bits16 )
+      s.resp_msg  = OutPort( Bits16 )
+      s.a_mux_sel = InPort( Bits2 )
+      s.a_reg_en  = InPort( Bits1 )
+      s.b_mux_sel = InPort( Bits1 )
+      s.b_reg_en  = InPort( Bits1 )
+      s.is_b_zero = OutPort( Bits1 )
+      s.is_a_lt_b = OutPort( Bits1 )
 
       s.sub_out = Wire( Bits16 )
 
@@ -457,19 +457,19 @@ def test_gcd( do_test ):
 
   class GcdUnitCtrl( Component ):
     def construct( s ):
-      s.req_val  = InVPort( Bits1 )
-      s.req_rdy  = OutVPort( Bits1 )
-      s.resp_val = OutVPort( Bits1 )
-      s.resp_rdy = InVPort( Bits1 )
+      s.req_val  = InPort( Bits1 )
+      s.req_rdy  = OutPort( Bits1 )
+      s.resp_val = OutPort( Bits1 )
+      s.resp_rdy = InPort( Bits1 )
 
       s.state = Reg( Bits2 )
 
-      s.a_mux_sel = OutVPort( Bits2 )
-      s.a_reg_en  = OutVPort( Bits1 )
-      s.b_mux_sel = OutVPort( Bits1 )
-      s.b_reg_en  = OutVPort( Bits1 )
-      s.is_b_zero = InVPort( Bits1 )
-      s.is_a_lt_b = InVPort( Bits1 )
+      s.a_mux_sel = OutPort( Bits2 )
+      s.a_reg_en  = OutPort( Bits1 )
+      s.b_mux_sel = OutPort( Bits1 )
+      s.b_reg_en  = OutPort( Bits1 )
+      s.is_b_zero = InPort( Bits1 )
+      s.is_a_lt_b = InPort( Bits1 )
 
       s.IDLE = Bits2( 0 )
       s.CALC = Bits2( 1 )

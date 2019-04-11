@@ -56,6 +56,7 @@ class Vector( BaseRTLIRDataType ):
     """Can type `obj` be cast into type `s`?"""
 
     if isinstance( obj, Vector ): return True
+    if isinstance( obj, Bool ): return True
     return False
 
   def __str__( s ):
@@ -114,7 +115,7 @@ class Struct( BaseRTLIRDataType ):
   def __call__( s, obj ):
     """Can obj be cast into type `s`?"""
 
-    if isinstance( obj, Struct ) and s is obj:
+    if isinstance( obj, Struct ) and s == obj:
       return True
     return False
 

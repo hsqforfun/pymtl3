@@ -32,7 +32,7 @@ class StructuralRTLIRGenL1Pass( BasePass ):
 
   def gen_rtlir_types( s, top ):
 
-    top._pass_structural_rtlir_gen.rtlir_type = get_rtlir_type( top )
+    top._pass_structural_rtlir_gen.rtlir_type = get_rtlir( top )
 
   #-----------------------------------------------------------------------
   # gen_constants

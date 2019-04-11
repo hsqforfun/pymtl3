@@ -83,7 +83,7 @@ class BehavioralRTLIRTypeCheckVisitorL4( BehavioralRTLIRTypeCheckVisitorL3 ):
     if isinstance( node.value.Type, Array ) and\
        isinstance( node.value.Type.get_sub_type(), InterfaceView ):
 
-      if not hasattr( node.idx._value ):
+      if not hasattr( node.idx, '_value' ):
         raise PyMTLTypeError(
           s.blk, node.ast,
           'index of interface array must be a static constant expression!'

@@ -1,2 +1,2 @@
 
-from RTLIRType import get_rtlir_type
+from RTLIRType import get_rtlir
