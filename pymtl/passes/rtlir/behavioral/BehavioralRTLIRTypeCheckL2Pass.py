@@ -212,6 +212,8 @@ class BehavioralRTLIRTypeCheckVisitorL2( BehavioralRTLIRTypeCheckVisitorL1 ):
         s.blk, node.ast, 'the body and orelse of "if-exp" must have the same type!'
       )
 
+    node.Type = node.body.Type
+
   #-----------------------------------------------------------------------
   # visit_UnaryOp
   #-----------------------------------------------------------------------

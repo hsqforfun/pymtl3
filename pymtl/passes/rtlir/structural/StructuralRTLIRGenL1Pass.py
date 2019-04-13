@@ -174,8 +174,8 @@ class StructuralRTLIRGenL1Pass( BasePass ):
 
       for idx, ( ( wr, rd ), visited ) in enumerate( m_connections ):
 
-        if ( ( s.contains( u, wr ) and s.contains( v, rd ) ) or\
-           ( s.contains( u, rd ) and s.contains( v, wr ) ) ) and not visited:
+        if not visited and ( ( s.contains( u, wr ) and s.contains( v, rd ) ) or\
+           ( s.contains( u, rd ) and s.contains( v, wr ) ) ):
 
           connections.append( ( wr, rd ) )
           m_connections[idx] = ( m_connections[idx][0], True )

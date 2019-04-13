@@ -26,10 +26,11 @@ class StructuralRTLIRGenL3Pass( StructuralRTLIRGenL2Pass ):
   # Override
   def contains( s, obj, signal ):
 
-    if super(StructuralRTLIRGenL3Pass, s).contains(obj, signal): return True
+    if obj == signal: return True
 
-    if not isinstance( signal, CurComp ):
-
-      return s.contains( obj, signal.get_base() )
+    while not isinstance( signal, CurComp ):
+      signal = signal.get_base()
+      if obj == signal:
+        return True
 
     return False

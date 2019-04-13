@@ -465,8 +465,10 @@ def gen_signal_expr( signal ):
     classes = map( lambda f: f( cur_node, *ops ), func_list )
     assert reduce( lambda r, c: r + (1 if c else 0), classes, 0 ) == 1,\
       'internal error: not unique class {}!'.format( classes )
-    return\
-      reduce(lambda r, c: r if not c else c(cur_node, *ops), classes, None)
+    for cls in classes:
+      if not cls:
+        return cls( cur_node, *ops )
+    assert False
 
   try:
 
