@@ -26,8 +26,7 @@ class SVStructuralTranslatorL1( StructuralTranslatorL1 ):
 
     else:
       array_dim = reduce(
-        lambda x,y: x+'[0:{}]'.format(y-1), Type.get_dim_sizes(), ''
-      )
+        lambda x,y: x+'[0:{}]'.format(y-1), Type.get_dim_sizes(), '' )
       return {
         'def'  : '',
         'decl' : array_dim,

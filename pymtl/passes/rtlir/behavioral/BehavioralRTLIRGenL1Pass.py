@@ -6,7 +6,7 @@
 # Author : Peitian Pan
 # Date   : Oct 20, 2018
 
-import ast
+import ast, copy
 
 from pymtl        import *
 from pymtl.passes import BasePass, PassMetadata
@@ -201,6 +201,13 @@ class BehavioralRTLIRGeneratorL1( ast.NodeVisitor ):
 
     obj = s.get_call_obj( node )
 
+    if ( obj == copy.copy ) or ( obj == copy.deepcopy ):
+      assert len( node.args ) == 1,\
+        'copy function {} takes exactly 1 argument!'.format( obj )
+      ret = s.visit( node.args[0] )
+      ret.ast = node
+      return ret
+
     # Now that we have the live Python object, there are a few cases that
     # we need to treat separately:
     # 1. Instantiation: Bits16( 10 ) where obj is an instance of Bits
@@ -224,9 +231,12 @@ class BehavioralRTLIRGeneratorL1( ast.NodeVisitor ):
       value = s.visit( node.args[0] )
 
       if not isinstance( value, Number ):
-        raise PyMTLSyntaxError(
-          s.blk, node, 'only constant numbers can be instantiated!'
-        )
+        ret = value
+        ret.ast = node
+        return ret
+        # raise PyMTLSyntaxError(
+          # s.blk, node, 'only constant numbers can be instantiated!'
+        # )
 
       ret = BitsCast( nbits, value )
       ret.ast = node

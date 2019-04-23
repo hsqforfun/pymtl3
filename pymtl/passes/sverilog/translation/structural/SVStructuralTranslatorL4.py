@@ -42,29 +42,77 @@ class SVStructuralTranslatorL4(
     return {
       'def' : s.rtlir_tr_wire_decl('{c_id}$'+port_id, port_def_rtype,
                 port_array_type, dtype),
-      'decl' : '.{port_id}({c_id}{{c_n_dim}}${port_id})'.format( **locals() )
+      'decl' : '.{port_id}({{c_id}}${port_id})'.format( **locals() )
     }
 
   def rtlir_tr_subcomp_ifc_port_decls( s, _ifc_decls ):
-    ifc_port_decls = map( lambda x: x['decl'], _ifc_decls )
-    ifc_port_defs = map( lambda x: x['def'], _ifc_decls )
-    make_indent( ifc_port_decls, 2 )
-    make_indent( ifc_port_defs, 1 )
+    _ifc_decls = reduce( lambda res,l: res+l, _ifc_decls, [] )
+    ifc_defs = map( lambda x: x['def'], _ifc_decls )
+    ifc_decls = map( lambda x: x['decl'], _ifc_decls )
     return {
-      'def' : '\n'.join( ifc_port_defs ),
-      'decl' : ',\n'.join( ifc_port_decls )
+      'def' : '\n'.join( ifc_defs ),
+      'decl' : ',\n'.join( ifc_decls )
     }
 
   def rtlir_tr_subcomp_ifc_port_decl( s, c_id, c_rtype, ifc_port_id,
-      ifc_port_rtype, ifc_port_array_type ):
-    ifc_name = ifc_port_rtype.get_interface().get_name()
-    ifc_view_name = ifc_port_rtype.get_name()
-    def_tmplt = '{ifc_name} {c_id}{{c_n_dim}}${ifc_port_id}{dim_sizes}();'
-    decl_tmplt = '.{ifc_port_id}({c_id}{{c_n_dim}}${ifc_port_id}.{ifc_view_name})'
-    dim_sizes = ifc_port_array_type['decl']
+      ifc_port_rtype, ifc_port_array_type, ports ):
 
-    return { 'def' : def_tmplt.format( **locals() ),
-      'decl' : decl_tmplt.format( **locals() ) }
+    def gen_subcomp_ifc_decl( c_id, c_rtype, ports, n_dim, ifc_n_dim ):
+      if not n_dim:
+        return [ {
+          'def' : ports['def'].format( **locals() ),
+          'decl' : ports['decl'].format( **locals() )
+        } ]
+      else:
+        return reduce( lambda res, l: res + l, map(
+          lambda idx: gen_subcomp_ifc_decl( c_id, c_rtype, ports, n_dim[1:],
+            ifc_n_dim+'_$'+str( idx ) ), xrange( n_dim[0] )
+        ), [] )
+
+    n_dim = ifc_port_array_type[ 'n_dim' ]
+    return\
+      gen_subcomp_ifc_decl( c_id, c_rtype, ports, n_dim, '' )
+
+  # def rtlir_tr_subcomp_ifc_port_decls( s, _ifc_decls ):
+    # ifc_port_decls = map( lambda x: x['decl'], _ifc_decls )
+    # ifc_port_defs = map( lambda x: x['def'], _ifc_decls )
+    # make_indent( ifc_port_decls, 2 )
+    # make_indent( ifc_port_defs, 1 )
+    # return {
+      # 'def' : '\n'.join( ifc_port_defs ),
+      # 'decl' : ',\n'.join( ifc_port_decls )
+    # }
+
+  # def rtlir_tr_subcomp_ifc_port_decl( s, c_id, c_rtype, ifc_port_id,
+      # ifc_port_rtype, ifc_port_array_type ):
+    # assert len( ifc_port_array_type['n_dim'] ) <= 1,\
+      # 'interface array {} cannot have more than 1 dimension!'.format(
+          # ifc_port_id )
+    # ifc_name = ifc_port_rtype.get_name()
+    # dim_sizes = ifc_port_array_type['decl']
+    # inst_tmplt = '{ifc_name} {c_id}{{c_n_dim}}${ifc_port_id} {dim_sizes} ();'
+    # decl_tmplt =\
+      # '.{ifc_port_id}({c_id}{{c_n_dim}}${ifc_port_id}.ModuleSide)'
+    # helper_tmplt =\
+# """\
+# {ifc_port_wires}
+  # _{ifc_name}_helper _{c_id}{{c_n_dim}}${ifc_port_id} {dim_sizes}(
+    # ._ifc( {c_id}{{c_n_dim}}${ifc_port_id} ),
+# {ifc_ports}
+  # );
+# """
+
+    # return { 'def' : inst_tmplt.format( **locals() ),
+      # 'decl' : decl_tmplt.format( **locals() ) }
+
+  # def rtlir_tr_subcomp_decls( s, subcomps ):
+    # return '\n\n'.join( subcomps )
+
+  # def rtlir_tr_subcomp_decl( s, c_id, c_rtype, port_decls, ifc_port_decls,
+      # c_array_type ):
+    # subcomp_tmplt = \
+# """\
+# """
 
   def rtlir_tr_subcomp_decls( s, subcomps ):
     subcomp_decls = reduce( lambda res, l: res+l, subcomps, [] )

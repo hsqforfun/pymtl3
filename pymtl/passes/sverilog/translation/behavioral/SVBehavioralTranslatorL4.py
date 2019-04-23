@@ -34,7 +34,7 @@ class BehavioralRTLIRToSVVisitorL4( BehavioralRTLIRToSVVisitorL3 ):
 
   def visit_Attribute( s, node ):
 
-    if isinstance( node.value, InterfaceView ):
+    if isinstance( node.value.Type, InterfaceView ):
 
       value = s.visit( node.value )
       attr = node.attr

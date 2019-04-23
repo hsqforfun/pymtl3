@@ -61,7 +61,8 @@ class StructuralRTLIRGenL4Pass( StructuralRTLIRGenL3Pass ):
 
     ns = s.top._pass_structural_rtlir_gen
 
-    _rw_pair = ( gen_signal_expr( writer ), gen_signal_expr( reader ) )
+    _rw_pair = ( gen_signal_expr( component, writer ),
+                 gen_signal_expr( component, reader ) )
 
     ns.connections_self_child[ component ].add( _rw_pair )
 
@@ -74,7 +75,8 @@ class StructuralRTLIRGenL4Pass( StructuralRTLIRGenL3Pass ):
 
     ns = s.top._pass_structural_rtlir_gen
 
-    _rw_pair = ( gen_signal_expr( writer ), gen_signal_expr( reader ) )
+    _rw_pair = ( gen_signal_expr( component, writer ),
+                 gen_signal_expr( component, reader ) )
 
     ns.connections_child_child[ component ].add( _rw_pair )
 
@@ -102,3 +104,13 @@ class StructuralRTLIRGenL4Pass( StructuralRTLIRGenL3Pass ):
     super( StructuralRTLIRGenL4Pass, s ).sort_connections( m )
 
     for child in m.get_child_components(): s.sort_connections( child )
+
+  #-----------------------------------------------------------------------
+  # gen_interfaces
+  #-----------------------------------------------------------------------
+
+  def gen_interfaces( s, m ):
+
+    super( StructuralRTLIRGenL4Pass, s ).gen_interfaces( m )
+
+    for child in m.get_child_components(): s.gen_interfaces( child )

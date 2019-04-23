@@ -424,9 +424,9 @@ signal_expr_classes = {
     'Base'  : [ CurComp.is_cur_comp ]
 }
 
-def gen_signal_expr( signal ):
+def gen_signal_expr( cur_component, signal ):
 
-  def get_next_op( expr, cur_pos ):
+  def get_next_op( expr, cur_pos, my_name, full_name ):
 
     if not expr[cur_pos:]: return ( 'Done', '' ), 0
 
@@ -458,7 +458,13 @@ def gen_signal_expr( signal ):
 
     # The current component ( base of attribute )
 
-    else: return ( 'Base', expr[cur_pos:pos] ), pos
+    else:
+
+      base_pos = expr.find( full_name )
+      assert base_pos >= 0
+      return ( 'Base', my_name ), base_pos + len( full_name )
+
+    # else: return ( 'Base', expr[cur_pos:pos] ), pos
 
   def get_cls_inst( func_list, cur_node, ops ):
 
@@ -466,7 +472,7 @@ def gen_signal_expr( signal ):
     assert reduce( lambda r, c: r + (1 if c else 0), classes, 0 ) == 1,\
       'internal error: not unique class {}!'.format( classes )
     for cls in classes:
-      if not cls:
+      if cls:
         return cls( cur_node, *ops )
     assert False
 
@@ -485,8 +491,12 @@ def gen_signal_expr( signal ):
   while hasattr( base_comp._dsl, 'parent_obj' ) and base_comp._dsl.parent_obj:
 
     base_comp = base_comp._dsl.parent_obj
+    if base_comp == cur_component: break
 
-  assert isinstance( base_comp, pymtl.Component )
+  assert isinstance( base_comp, pymtl.Component ) and base_comp == cur_component
+  full_name = base_comp._dsl.full_name
+  my_name = base_comp._dsl.my_name
+  assert expr.find( full_name ) >= 0
 
   # Start from the base component and process one operation per iteration
 
@@ -494,7 +504,7 @@ def gen_signal_expr( signal ):
 
   while cur_pos < len( expr ):
 
-    op, next_pos = get_next_op( expr, cur_pos )
+    op, next_pos = get_next_op( expr, cur_pos, my_name, full_name )
     if op[0] == 'Done': break
 
     cur_node = get_cls_inst( signal_expr_classes[ op[0] ], cur_node, op[1:] )

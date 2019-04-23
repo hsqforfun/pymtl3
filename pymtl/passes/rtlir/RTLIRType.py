@@ -370,8 +370,8 @@ class Component( BaseRTLIRType ):
     super( Component, s ).__init__()
 
     s.name = obj.__class__.__name__
-    s.params = s._gen_parameters( obj )
     s.argspec = inspect.getargspec( getattr( obj, 'construct' ) )
+    s.params = s._gen_parameters( obj )
     s.properties = properties
     s.unpacked = unpacked
 
@@ -379,8 +379,16 @@ class Component( BaseRTLIRType ):
   
   def _gen_parameters( s, obj ):
 
+    defaults = s.argspec.defaults if s.argspec.defaults else ()
+
     # The non-keyword parameters are indexed by an empty string
     ret = { '' : obj._dsl.args }
+    default_len = len(s.argspec.args[1:])-len(ret[''])
+    assert default_len <= len( defaults ),\
+      'varargs are not allowed at construct() of {}!'.format( obj )
+    if not default_len == 0:
+      ret[''] = ret[''] + defaults[-default_len:]
+
     kwargs = obj._dsl.kwargs.copy()
 
     if 'elaborate' in obj._dsl.param_dict:

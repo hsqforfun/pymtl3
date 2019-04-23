@@ -69,7 +69,7 @@ def mk_RTLIRTranslator( _BehavioralTranslator, _StructuralTranslator ):
         s.gen_hierarchy_metadata( 'decl_type_vector', 'decl_type_vector' )
         s.gen_hierarchy_metadata( 'decl_type_array', 'decl_type_array' )
         s.gen_hierarchy_metadata( 'decl_type_struct', 'decl_type_struct' )
-        # s.gen_hierarchy_metadata( 'def_ifcs', 'def_ifcs' )
+        s.gen_hierarchy_metadata( 'def_ifcs', 'def_ifcs' )
 
       s.component = {}
 

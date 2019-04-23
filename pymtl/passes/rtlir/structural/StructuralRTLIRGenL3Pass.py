@@ -15,6 +15,21 @@ class StructuralRTLIRGenL3Pass( StructuralRTLIRGenL2Pass ):
   def __call__( s, top ):
 
     super( StructuralRTLIRGenL3Pass, s ).__call__( top )
+    s.gen_interfaces( top )
+
+  def gen_interfaces( s, m ):
+    """
+       Collect all interfaces to generate their definitions later.
+    """
+
+    # ns = s.top._pass_structural_rtlir_gen
+    # if not hasattr( ns, 'ifcs' ): ns.ifcs = []
+    # m_rtype = ns.rtlir_type
+
+    # for name, ifc_rtype in m_rtype.get_ifc_views():
+      # ifc_name = ifc_rtype.get_name()
+      # if not ifc_name in map( lambda x: x[0], ns.ifcs ):
+        # ns.ifcs.append( ( ifc_name, ifc_rtype ) )
 
   #-----------------------------------------------------------------------
   # contains

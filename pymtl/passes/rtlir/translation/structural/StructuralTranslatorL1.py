@@ -24,7 +24,11 @@ class StructuralTranslatorL1( BaseRTLIRTranslator ):
 
     super( StructuralTranslatorL1, s ).__init__( top )
 
+    # Metadata namespace for RTLIR structural translator and the backend
+    # structural translator
+
     s.structural = TranslatorMetadata()
+    s.s_backend = TranslatorMetadata()
 
     # Generate metadata
 

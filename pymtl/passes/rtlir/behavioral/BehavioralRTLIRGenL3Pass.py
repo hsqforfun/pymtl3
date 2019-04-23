@@ -58,7 +58,7 @@ class BehavioralRTLIRGeneratorL3( BehavioralRTLIRGeneratorL2 ):
 
     obj = s.get_call_obj( node )
 
-    if ( inspect.isclass( obj ) or inspect.isfunction( obj ) ) and \
+    if ( inspect.isclass( obj ) ) and \
         ( not is_BitsX(obj) ) and ( not obj is bool ):
 
       if node.args:

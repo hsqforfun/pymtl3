@@ -100,9 +100,28 @@ class StructuralTranslatorL4( StructuralTranslatorL3 ):
           ifc_port_array_rtype = None
           ifc_port_rtype = _ifc_port_rtype
 
+        ports = []
+        for port_id, p_rtype in ifc_port_rtype.get_all_ports_packed():
+          if isinstance( p_rtype, Array ):
+            port_array_rtype = p_rtype
+            port_rtype = p_rtype.get_sub_type()
+          else:
+            port_array_rtype = None
+            port_rtype = p_rtype
+
+          ports.append( s.rtlir_tr_subcomp_port_decl(
+            '{c_id}', c_rtype,
+            ifc_port_id + '{ifc_n_dim}_' + port_id,
+            port_rtype,
+            s.rtlir_tr_unpacked_array_type( port_array_rtype )
+          ) )
+
+        # s.structural.decl_ifcs[m] = s.rtlir_tr_interface_decls( ifc_decls )
+
         ifc_conns.append( s.rtlir_tr_subcomp_ifc_port_decl(
-          c_id, c_rtype, ifc_port_id, ifc_port_rtype,
-          s.rtlir_tr_unpacked_array_type( ifc_port_array_rtype )
+          '{c_id}', c_rtype, ifc_port_id, ifc_port_rtype,
+          s.rtlir_tr_unpacked_array_type( ifc_port_array_rtype ),
+          s.rtlir_tr_subcomp_port_decls( ports )
         ) )
 
       # Generate a list of port/interface connections

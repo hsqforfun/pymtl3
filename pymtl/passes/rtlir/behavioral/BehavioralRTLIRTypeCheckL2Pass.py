@@ -76,6 +76,9 @@ class BehavioralRTLIRTypeCheckVisitorL2( BehavioralRTLIRTypeCheckVisitorL1 ):
       'left' : ( Signal, 'lhs of binop should be signal/const!' ),
       'right' : ( Signal, 'rhs of binop should be signal/const!' ),
     }
+    s.type_expect[ 'UnaryOp' ] = {
+      'operand' : ( Signal, 'op of binop should be signal/const!' )
+    }
     s.type_expect[ 'For' ] = {
       'start' : ( Const, 'the start of a for-loop must be a constant expression!' ),
       'end':( Const, 'the end of a for-loop must be a constant expression!' ),
@@ -207,7 +210,8 @@ class BehavioralRTLIRTypeCheckVisitorL2( BehavioralRTLIRTypeCheckVisitorL1 ):
       )
 
     # body and orelse must have the same type
-    if node.body.Type != node.orelse.Type:
+    # if node.body.Type != node.orelse.Type:
+    if not node.body.Type.get_dtype()( node.orelse.Type.get_dtype() ):
       raise PyMTLTypeError(
         s.blk, node.ast, 'the body and orelse of "if-exp" must have the same type!'
       )
@@ -220,17 +224,13 @@ class BehavioralRTLIRTypeCheckVisitorL2( BehavioralRTLIRTypeCheckVisitorL1 ):
 
   def visit_UnaryOp( s, node ):
     if isinstance( node.op, Not ):
-      if not Bool()( node.operand.Type ):
+      if not Bool()( node.operand.Type.get_dtype() ):
         raise PyMTLTypeError(
           s.blk, node.ast, 'the operand of "unary-expr" cannot be cast to bool!'
         )
       node.Type = Wire( Bool() )
 
     else:
-      if not isinstance( node.operand.Type, ( Signal, Const ) ):
-        raise PyMTLTypeError(
-          s.blk, node.ast, 'the operand of "unary-expr" is not signal or constant!'
-        )
       node.Type = node.operand.Type
 
   #-----------------------------------------------------------------------
@@ -259,7 +259,8 @@ class BehavioralRTLIRTypeCheckVisitorL2( BehavioralRTLIRTypeCheckVisitorL1 ):
     l_type = node.left.Type.get_dtype()
     r_type = node.right.Type.get_dtype()
 
-    if not (isinstance( l_type, Vector ) and isinstance( r_type, Vector )):
+    # if not (isinstance( l_type, Vector ) and isinstance( r_type, Vector )):
+    if not( Vector(1)( l_type ) and Vector(1)( r_type ) ):
       raise PyMTLTypeError(
         s.blk, node.ast, "both sides of operation should be vector!"
       )

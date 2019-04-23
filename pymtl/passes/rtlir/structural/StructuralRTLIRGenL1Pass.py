@@ -125,7 +125,8 @@ class StructuralRTLIRGenL1Pass( BasePass ):
 
     ns = s.top._pass_structural_rtlir_gen
 
-    _rw_pair = ( gen_signal_expr( writer ), gen_signal_expr( reader ) )
+    _rw_pair = ( gen_signal_expr( component, writer ),
+                 gen_signal_expr( component, reader ) )
 
     ns.connections_self_self[ component ].add( _rw_pair )
 
@@ -170,7 +171,7 @@ class StructuralRTLIRGenL1Pass( BasePass ):
 
     for u, v in m.get_connect_order():
 
-      _u, _v = gen_signal_expr( u ), gen_signal_expr( v )
+      _u, _v = gen_signal_expr( m, u ), gen_signal_expr( m, v )
 
       for idx, ( ( wr, rd ), visited ) in enumerate( m_connections ):
 

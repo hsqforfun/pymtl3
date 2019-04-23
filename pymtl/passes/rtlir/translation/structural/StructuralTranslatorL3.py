@@ -37,6 +37,36 @@ class StructuralTranslatorL3( StructuralTranslatorL2 ):
   def translate_structural( s, top ):
 
     s.structural.decl_ifcs = {}
+
+    # Generate definitions for interfaces
+
+    # ifc_defs = []
+    # ifcs = top._pass_structural_rtlir_gen.ifcs
+    # for ifc_name, ifc_rtype in ifcs:
+
+      # ifc_ports = []
+      # for port_id, rtype in ifc_rtype.get_all_ports_packed():
+        # if isinstance( rtype, Array ):
+          # port_array_rtype = rtype
+          # port_rtype = rtype.get_sub_type()
+        # else:
+          # port_array_rtype = None
+          # port_rtype = rtype
+
+        # ifc_ports.append(
+          # s.rtlir_tr_interface_def_port_decl(
+            # s.rtlir_tr_var_id( port_id ),
+            # port_rtype,
+            # s.rtlir_tr_unpacked_array_type( port_array_type ),
+            # s.rtlir_data_type_translation( m, port_rtype.get_dtype() )
+        # ) )
+
+      # ifc_defs.append( s.rtlir_tr_interface_def(
+        # ifc_name, ifc_rtype,
+        # s.rtlir_tr_interface_def_port_decls( ifc_ports )
+      # ) )
+    # s.structural.def_ifcs = s.rtlir_tr_interface_defs( ifc_defs )
+
     super( StructuralTranslatorL3, s ).translate_structural( top )
 
   #-----------------------------------------------------------------------
@@ -71,7 +101,7 @@ class StructuralTranslatorL3( StructuralTranslatorL2 ):
           port_rtype = p_rtype
 
         ports.append( s.rtlir_tr_interface_port_decl(
-          port_id,
+          s.rtlir_tr_var_id( port_id ),
           port_rtype,
           s.rtlir_tr_unpacked_array_type( port_array_rtype ),
           s.rtlir_data_type_translation( m, port_rtype.get_dtype() )
@@ -84,6 +114,13 @@ class StructuralTranslatorL3( StructuralTranslatorL2 ):
           s.rtlir_tr_unpacked_array_type( array_rtype ),
           s.rtlir_tr_interface_port_decls( ports )
       ) )
+
+      # ifc_decls.append(
+        # s.rtlir_tr_interface_decl(
+          # ifc_id,
+          # ifc_rtype,
+          # s.rtlir_tr_unpacked_array_type( array_rtype )
+      # ) )
 
     s.structural.decl_ifcs[m] = s.rtlir_tr_interface_decls( ifc_decls )
 
@@ -122,6 +159,21 @@ class StructuralTranslatorL3( StructuralTranslatorL2 ):
   # The methods that are commented out were used to generate SystemVerilog
   # interface definitions.
 
+  # Definitions
+
+  def rtlir_tr_interface_def( s, ifc_name, ifc_rtype, port_decls ):
+    raise NotImplementedError()
+
+  def rtlir_tr_interface_defs( s, ifc_defs ):
+    raise NotImplementedError()
+
+  def rtlir_tr_interface_def_port_decl( s, port_id, port_rtype,
+      port_array_type, port_data_type ):
+    raise NotImplementedError()
+
+  def rtlir_tr_interface_def_port_decls( s, port_decls ):
+    raise NotImplementedError()
+
   # Declarations
 
   def rtlir_tr_interface_port_decls( s, port_decls ):
@@ -134,6 +186,8 @@ class StructuralTranslatorL3( StructuralTranslatorL2 ):
   def rtlir_tr_interface_decls( s, ifc_decls ):
     raise NotImplementedError()
 
+  # def rtlir_tr_interface_decl( s, ifc_id, ifc_rtype, array_type ):
+      # port_decls ):
   def rtlir_tr_interface_decl( s, ifc_id, ifc_rtype, array_type,
       port_decls ):
     raise NotImplementedError()
