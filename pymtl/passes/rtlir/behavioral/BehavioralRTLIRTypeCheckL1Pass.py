@@ -53,6 +53,7 @@ class BehavioralRTLIRTypeCheckVisitorL1( BehavioralRTLIRNodeVisitor ):
     s.type_expect = {}
 
     lhs_types = ( Port, Wire )
+    index_types = ( Port, Wire, Array )
 
     s.type_expect[ 'Assign' ] = {
       'target' : ( lhs_types, 'lhs of assignment must be a signal!' ),
@@ -66,7 +67,7 @@ class BehavioralRTLIRTypeCheckVisitorL1( BehavioralRTLIRNodeVisitor ):
     }
     s.type_expect[ 'Index' ] = {
       'idx':(Signal, 'index must be a signal or constant expression!'),
-      'value':(lhs_types, 'the base of an index must be an array or signal!')
+      'value':(index_types, 'the base of an index must be an array or signal!')
     }
     s.type_expect[ 'Slice' ] = {
       'value':( lhs_types, 'the base of a slice must be a signal!' ),

@@ -67,8 +67,8 @@ def test_upblk_if1( do_test ):
 
     def construct( s ):
 
-      s.in_2 = [ [ [ InVPort( Bits1 ) for _ in xrange(2) ] for _ in xrange(1) ] for _ in xrange(2) ]
-      s.out1 = [ [ OutVPort( Bits2 ) for _ in xrange(2) ] for _ in xrange(3) ]
+      s.in_2 = [ [ [ InPort( Bits1 ) for _ in xrange(2) ] for _ in xrange(1) ] for _ in xrange(2) ]
+      s.out1 = [ [ OutPort( Bits2 ) for _ in xrange(2) ] for _ in xrange(3) ]
 
       # Output bitwidth = 16
 
@@ -132,8 +132,8 @@ def test_upblk_assign2( do_test ):
       
       Type = Bits1
 
-      s.in_0 = InVPort( Bits1 )
-      s.out0 = OutVPort( Bits2 )
+      s.in_0 = InPort( Bits1 )
+      s.out0 = OutPort( Bits2 )
 
       # Output bitwidth = 16
 

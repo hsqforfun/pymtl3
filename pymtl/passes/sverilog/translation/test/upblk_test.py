@@ -58,8 +58,8 @@ def test_struct_inport( do_test ):
 
   class struct_inport( Component ):
     def construct( s, n_foo, n_bar ):
-      s.in_ = InVPort( struct_fields )
-      s.out = OutVPort( mk_bits( n_foo + n_bar ) )
+      s.in_ = InPort( struct_fields )
+      s.out = OutPort( mk_bits( n_foo + n_bar ) )
 
       @s.update
       def struct_inport():
@@ -103,8 +103,8 @@ def test_composite_port( do_test ):
 
   class composite_port( Component ):
     def construct( s, num_port ):
-      s.in_ = [ InVPort( val_bundle ) for _ in xrange( num_port ) ]
-      s.out = [ OutVPort( Bits32 ) for _ in xrange( num_port ) ]
+      s.in_ = [ InPort( val_bundle ) for _ in xrange( num_port ) ]
+      s.out = [ OutPort( Bits32 ) for _ in xrange( num_port ) ]
 
       @s.update
       def composite_port_out():

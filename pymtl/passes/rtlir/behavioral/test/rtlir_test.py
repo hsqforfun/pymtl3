@@ -12,7 +12,7 @@ from pymtl                             import *
 from pymtl.passes.rtlir.behavioral.BehavioralRTLIR import *
 from pymtl.passes.utility.test_utility import expected_failure, do_test
 
-from .. import BehavioralRTLIRGenPass
+from .. import BehavioralRTLIRGenPass, BehavioralRTLIRTypeCheckPass
 from ..errors                          import PyMTLTypeError
 
 #-------------------------------------------------------------------------
@@ -26,7 +26,7 @@ def local_do_test( m ):
   ref = m._rtlir_test_ref
   m.elaborate()
   BehavioralRTLIRGenPass()( m )
-  BehavioralRTLIRTypeCheckPass()( m )
+  # BehavioralRTLIRTypeCheckPass()( m )
 
   for blk in m.get_update_blocks():
     assert\
@@ -39,8 +39,8 @@ def local_do_test( m ):
 def test_index_basic( do_test ):
   class index_basic( Component ):
     def construct( s ):
-      s.in_ = [ InVPort( Bits16 ) for _ in xrange( 4 ) ]
-      s.out = [ OutVPort( Bits16 ) for _ in xrange( 2 ) ]
+      s.in_ = [ InPort( Bits16 ) for _ in xrange( 4 ) ]
+      s.out = [ OutPort( Bits16 ) for _ in xrange( 2 ) ]
 
       @s.update
       def index_basic():
@@ -76,8 +76,8 @@ def test_index_basic( do_test ):
 def test_mismatch_width_assign( do_test ):
   class A( Component ):
     def construct( s ):
-      s.in_ = InVPort( Bits16 )
-      s.out = OutVPort( Bits8 )
+      s.in_ = InPort( Bits16 )
+      s.out = OutPort( Bits8 )
 
       @s.update
       def mismatch_width_assign():
@@ -111,8 +111,8 @@ def test_mismatch_width_assign( do_test ):
 def test_slicing_basic( do_test ):
   class slicing_basic( Component ):
     def construct( s ):
-      s.in_ = InVPort( Bits32 )
-      s.out = OutVPort( Bits64 )
+      s.in_ = InPort( Bits32 )
+      s.out = OutPort( Bits64 )
 
       @s.update
       def slicing_basic():
@@ -148,8 +148,8 @@ def test_slicing_basic( do_test ):
 def test_bits_basic( do_test ):
   class bits_basic( Component ):
     def construct( s ):
-      s.in_ = InVPort( Bits16 )
-      s.out = OutVPort( Bits16 )
+      s.in_ = InPort( Bits16 )
+      s.out = OutPort( Bits16 )
 
       @s.update
       def bits_basic():
@@ -181,8 +181,8 @@ def test_bits_basic( do_test ):
 def test_index_bits_slicing( do_test ):
   class index_bits_slicing( Component ):
     def construct( s ):
-      s.in_ = [ InVPort( Bits16 ) for _ in xrange( 10 ) ]
-      s.out = [ OutVPort( Bits16 ) for _ in xrange( 5 ) ]
+      s.in_ = [ InPort( Bits16 ) for _ in xrange( 10 ) ]
+      s.out = [ OutPort( Bits16 ) for _ in xrange( 5 ) ]
 
       @s.update
       def index_bits_slicing():
@@ -239,8 +239,8 @@ def test_index_bits_slicing( do_test ):
 def test_multi_components( do_test ):
   class multi_components_B( Component ):
     def construct( s ):
-      s.in_ = InVPort( Bits16 )
-      s.out = OutVPort( Bits16 )
+      s.in_ = InPort( Bits16 )
+      s.out = OutPort( Bits16 )
 
       @s.update
       def multi_components_B():
@@ -248,8 +248,8 @@ def test_multi_components( do_test ):
 
   class multi_components_A( Component ):
     def construct( s ):
-      s.in_ = InVPort( Bits16 )
-      s.out = OutVPort( Bits16 )
+      s.in_ = InPort( Bits16 )
+      s.out = OutPort( Bits16 )
       s.b = multi_components_B()
 
       # There should be a way to check module connections?
@@ -290,8 +290,8 @@ def test_multi_components( do_test ):
 def test_if_basic( do_test ):
   class if_basic( Component ):
     def construct( s ):
-      s.in_ = InVPort( Bits16 )
-      s.out = OutVPort( Bits8 )
+      s.in_ = InPort( Bits16 )
+      s.out = OutPort( Bits8 )
 
       @s.update
       def if_basic():
@@ -327,8 +327,8 @@ def test_if_basic( do_test ):
 def test_for_basic( do_test ):
   class for_basic( Component ):
     def construct( s ):
-      s.in_ = InVPort( Bits16 )
-      s.out = OutVPort( Bits8 )
+      s.in_ = InPort( Bits16 )
+      s.out = OutPort( Bits8 )
 
       @s.update
       def for_basic():
@@ -368,8 +368,8 @@ def test_for_basic( do_test ):
 def test_multi_upblks( do_test ):
   class multi_upblks( Component ):
     def construct( s ):
-      s.in_ = InVPort( Bits4 )
-      s.out = OutVPort( Bits8 )
+      s.in_ = InPort( Bits4 )
+      s.out = OutPort( Bits8 )
 
       @s.update
       def multi_upblks_1():

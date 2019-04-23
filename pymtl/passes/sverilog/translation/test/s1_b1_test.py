@@ -61,20 +61,17 @@ def local_do_test( m ):
   del m
 
 def test_upblk_assign1( do_test ):
-
-  class TestComponent( Component  ):
-
+  class TestComponent( Component ):
     def construct( s ):
-
-      s.in_0 = InVPort( Bits1 )
-      s.in_1 = InVPort( Bits2 )
-      s.in_2 = [ [ [ InVPort( Bits1 ) for _ in xrange(2) ] for _ in xrange(1) ] for _ in xrange(2) ]
-      s.in_3 = InVPort( Bits1 )
-      s.in_4 = InVPort( Bits1 )
-      s.out0 = OutVPort( Bits2 )
-      s.out1 = [ [ OutVPort( Bits2 ) for _ in xrange(2) ] for _ in xrange(3) ]
-      s.out2 = OutVPort( Bits1 )
-      s.out3 = OutVPort( Bits1 )
+      s.in_0 = InPort( Bits1 )
+      s.in_1 = InPort( Bits2 )
+      s.in_2 = [ [ [ InPort( Bits1 ) for _ in xrange(2) ] for _ in xrange(1) ] for _ in xrange(2) ]
+      s.in_3 = InPort( Bits1 )
+      s.in_4 = InPort( Bits1 )
+      s.out0 = OutPort( Bits2 )
+      s.out1 = [ [ OutPort( Bits2 ) for _ in xrange(2) ] for _ in xrange(3) ]
+      s.out2 = OutPort( Bits1 )
+      s.out3 = OutPort( Bits1 )
 
       # Output bitwidth = 16
 
@@ -98,7 +95,6 @@ def test_upblk_assign1( do_test ):
         s.out3[0:1] = s.in_3
 
   m = TestComponent()
-
   m._input_data = {'in_0': ([1], Bits1), 'in_1': ([1], Bits2),
       'in_2[0][0][0]' : ([0], Bits1),
       'in_2[0][0][1]' : ([0], Bits1),
@@ -107,7 +103,6 @@ def test_upblk_assign1( do_test ):
       'in_3' : ( [1], Bits1 ),
       'in_4' : ( [1], Bits1 )
   }
-
   m._outport_types = {'out0': Bits2, 
       'out1[0][0]' : Bits2,
       'out1[0][1]' : Bits2,
@@ -121,21 +116,13 @@ def test_upblk_assign1( do_test ):
   do_test( m )
 
 def test_upblk_assign2( do_test ):
-
-  class TestComponent( Component  ):
-
+  class TestComponent( Component ):
     def construct( s ):
-      
       Type = Bits1
-
-      s.in_0 = InVPort( Bits1 )
-      s.out0 = OutVPort( Bits2 )
-
+      s.in_0 = InPort( Bits1 )
+      s.out0 = OutPort( Bits2 )
       s.ww = Wire( Bits1 )
-
       s.connect( s.ww, 1 )
-
-      # Output bitwidth = 16
 
       @s.update
       def connection():
@@ -144,9 +131,7 @@ def test_upblk_assign2( do_test ):
         s.out0[1:2] = s.ww
 
   m = TestComponent()
-
   m._input_data = { 'in_0': ([1], Bits1) }
-
   m._outport_types = { 'out0': Bits2 }
 
   do_test( m )

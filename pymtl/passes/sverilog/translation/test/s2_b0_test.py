@@ -76,8 +76,8 @@ def test_port_connection1( do_test ):
 
     def construct( s ):
 
-      s.in_ = InVPort( ReqType )
-      s.out = OutVPort( ReqType )
+      s.in_ = InPort( ReqType )
+      s.out = OutPort( ReqType )
 
       s.connect( s.in_, s.out )
 
@@ -100,8 +100,8 @@ def test_port_connection2( do_test ):
 
     def construct( s ):
 
-      s.in_ = InVPort( ReqType )
-      s.out = OutVPort( RespType )
+      s.in_ = InPort( ReqType )
+      s.out = OutPort( RespType )
 
       STATE = 0
 

@@ -55,15 +55,15 @@ def test_port_connection1( do_test ):
     
     def construct( s ):
 
-      s.in_0 = InVPort( Bits1 )
-      s.in_1 = InVPort( Bits2 )
-      s.in_2 = [ [ [ InVPort( Bits1 ) for _ in xrange(2) ] for _ in xrange(1) ] for _ in xrange(2) ]
-      s.in_3 = InVPort( Bits1 )
-      s.in_4 = InVPort( Bits1 )
-      s.out0 = OutVPort( Bits2 )
-      s.out1 = [ [ OutVPort( Bits2 ) for _ in xrange(2) ] for _ in xrange(3) ]
-      s.out2 = OutVPort( Bits1 )
-      s.out3 = OutVPort( Bits1 )
+      s.in_0 = InPort( Bits1 )
+      s.in_1 = InPort( Bits2 )
+      s.in_2 = [ [ [ InPort( Bits1 ) for _ in xrange(2) ] for _ in xrange(1) ] for _ in xrange(2) ]
+      s.in_3 = InPort( Bits1 )
+      s.in_4 = InPort( Bits1 )
+      s.out0 = OutPort( Bits2 )
+      s.out1 = [ [ OutPort( Bits2 ) for _ in xrange(2) ] for _ in xrange(3) ]
+      s.out2 = OutPort( Bits1 )
+      s.out3 = OutPort( Bits1 )
 
       # Output bitwidth = 16
 
@@ -111,8 +111,8 @@ def test_port_connection2( do_test ):
 
   class TestComponent( Component ):
     def construct( s ):
-      s.in_ = InVPort( Bits16 )
-      s.out = OutVPort( Bits16 )
+      s.in_ = InPort( Bits16 )
+      s.out = OutPort( Bits16 )
 
       s.connect( s.out, s.in_ )
 
@@ -130,9 +130,9 @@ def test_port_connection3( do_test ):
     
     def construct( s ):
 
-      s.in_0 = InVPort( Bits1 )
-      s.in_1 = InVPort( Bits1 )
-      s.out0 = OutVPort( Bits1 )
+      s.in_0 = InPort( Bits1 )
+      s.in_1 = InPort( Bits1 )
+      s.out0 = OutPort( Bits1 )
 
       # Output bitwidth = 1
 
@@ -152,15 +152,15 @@ def test_port_connection4( do_test ):
     
     def construct( s ):
 
-      s.in_0 = InVPort( Bits2 )
-      s.in_1 = InVPort( Bits2 )
-      s.in_2 = [ InVPort( Bits2 ) for _ in xrange(2) ]
-      s.in_3 = [ InVPort( Bits2 ) for _ in xrange(2) ]
-      s.in_4 = InVPort( Bits2 )
-      s.out0 = OutVPort( Bits1 )
-      s.out1 = OutVPort( Bits2 )
-      s.out2 = [ [ OutVPort( Bits2 ) for _ in xrange(2) ] for _ in xrange(3) ]
-      s.out3 = OutVPort( Bits2 )
+      s.in_0 = InPort( Bits2 )
+      s.in_1 = InPort( Bits2 )
+      s.in_2 = [ InPort( Bits2 ) for _ in xrange(2) ]
+      s.in_3 = [ InPort( Bits2 ) for _ in xrange(2) ]
+      s.in_4 = InPort( Bits2 )
+      s.out0 = OutPort( Bits1 )
+      s.out1 = OutPort( Bits2 )
+      s.out2 = [ [ OutPort( Bits2 ) for _ in xrange(2) ] for _ in xrange(3) ]
+      s.out3 = OutPort( Bits2 )
 
       # Output bitwidth = 17
 
@@ -205,10 +205,10 @@ def test_port_connection5( do_test ):
     
     def construct( s ):
 
-      s.in_0 = InVPort( Bits1 )
-      s.in_1 = InVPort( Bits2 )
-      s.out0 = [ [ [ OutVPort( Bits1 ) for _ in xrange(2) ] for _ in xrange(1) ] for _ in xrange(2) ]
-      s.out1 = OutVPort( Bits1 )
+      s.in_0 = InPort( Bits1 )
+      s.in_1 = InPort( Bits2 )
+      s.out0 = [ [ [ OutPort( Bits1 ) for _ in xrange(2) ] for _ in xrange(1) ] for _ in xrange(2) ]
+      s.out1 = OutPort( Bits1 )
 
       # Output bitwidth = 5
       
@@ -239,10 +239,10 @@ def test_port_connection6( do_test ):
     
     def construct( s ):
 
-      s.in_0 = InVPort( Bits1 )
-      s.in_1 = InVPort( Bits2 )
-      s.out0 = [ [ [ OutVPort( Bits1 ) for _ in xrange(2) ] for _ in xrange(1) ] for _ in xrange(2) ]
-      s.out1 = OutVPort( Bits1 )
+      s.in_0 = InPort( Bits1 )
+      s.in_1 = InPort( Bits2 )
+      s.out0 = [ [ [ OutPort( Bits1 ) for _ in xrange(2) ] for _ in xrange(1) ] for _ in xrange(2) ]
+      s.out1 = OutPort( Bits1 )
 
       # Output bitwidth = 5
 
@@ -273,14 +273,14 @@ def test_port_connection7( do_test ):
     
     def construct( s ):
 
-      s.in_0 = InVPort( Bits95 )
-      s.in_1 = InVPort( Bits36 )
-      s.in_2 = [ InVPort( Bits14 ) for _ in xrange(9) ]
-      s.in_3 = InVPort( Bits42 )
-      s.in_4 = InVPort( Bits79 )
-      s.out0 = OutVPort( Bits48 )
-      s.out1 = [ OutVPort( Bits109 ) for _ in xrange(7) ]
-      s.out2 = [ [ [ [ OutVPort( Bits86 ) for _ in xrange(6) ] for _ in xrange(3) ] for _ in xrange(1) ] for _ in xrange(1) ]
+      s.in_0 = InPort( Bits95 )
+      s.in_1 = InPort( Bits36 )
+      s.in_2 = [ InPort( Bits14 ) for _ in xrange(9) ]
+      s.in_3 = InPort( Bits42 )
+      s.in_4 = InPort( Bits79 )
+      s.out0 = OutPort( Bits48 )
+      s.out1 = [ OutPort( Bits109 ) for _ in xrange(7) ]
+      s.out2 = [ [ [ [ OutPort( Bits86 ) for _ in xrange(6) ] for _ in xrange(3) ] for _ in xrange(1) ] for _ in xrange(1) ]
 
       # Output bitwidth = 51043
 
