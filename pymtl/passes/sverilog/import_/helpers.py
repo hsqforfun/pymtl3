@@ -347,7 +347,8 @@ def read_ffi_model_py( lhs, rhs, name, dtype ):
 
   ret = []
 
-  rname = verilator_name( name )
+  # rname = verilator_name( name )
+  rname = name
   vec_list = flatten_packed_dtype( name, dtype )
   vec_list.reverse()
 
@@ -417,7 +418,7 @@ def write_ffi_model_py( lhs, rhs, name, dtype ):
   elif dtype_length <= 16 : VL_BITWIDTH = 16
   elif dtype_length <= 32 : VL_BITWIDTH = 32
   elif dtype_length <= 64 : VL_BITWIDTH = 64
-  else:              VL_BITWIDTH = 32
+  else:                     VL_BITWIDTH = 32
 
   vec_list = flatten_packed_dtype( name, dtype )
   vec_list.reverse()
@@ -475,7 +476,8 @@ def write_ffi_model_py( lhs, rhs, name, dtype ):
         'int('+cur_vec_list[0][0]+')' )
 
       ret.append(
-        (lhs+'='+rhs_str).format( name = verilator_name(name)+'[{}]'.format(lhs_pos) )
+        # (lhs+'='+rhs_str).format( name = verilator_name(name)+'[{}]'.format(lhs_pos) )
+        (lhs+'='+rhs_str).format( name = name+'[{}]'.format(lhs_pos) )
       )
 
       lhs_pos += 1
@@ -489,7 +491,8 @@ def write_ffi_model_py( lhs, rhs, name, dtype ):
       'int('+cur_vec_list[0][0]+')' )
 
     ret.append(
-      (lhs+'='+rhs_str).format(name = verilator_name(name)+'[{}]'.format(lhs_pos))
+      # (lhs+'='+rhs_str).format(name = verilator_name(name)+'[{}]'.format(lhs_pos))
+      (lhs+'='+rhs_str).format(name = name+'[{}]'.format(lhs_pos))
     )
 
   return ret
@@ -697,7 +700,8 @@ def generate_internal_line_trace_py( ports ):
   ret = [ 'lt = ""' ]
 
   for name, port in ports:
-    my_name = verilator_name( name )
+    # my_name = verilator_name( name )
+    my_name = name
     ret.append(
       'lt += "{my_name} = {{}}, ".format(s._ffi_m.{my_name}[0])'.\
         format(**locals())
