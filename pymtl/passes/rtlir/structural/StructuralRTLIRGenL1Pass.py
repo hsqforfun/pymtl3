@@ -68,8 +68,6 @@ class StructuralRTLIRGenL1Pass( BasePass ):
 
     nets = top.get_all_value_nets()
     adjs = top.get_signal_adjacency_dict()
-    import pdb
-    pdb.set_trace()
 
     for writer, net in nets:
 
@@ -170,8 +168,6 @@ class StructuralRTLIRGenL1Pass( BasePass ):
     m_connections = s.collect_connections( m )
 
     connections = []
-    import pdb
-    pdb.set_trace()
 
     for u, v in m.get_connect_order():
 

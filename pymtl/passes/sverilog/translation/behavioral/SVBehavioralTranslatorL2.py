@@ -41,6 +41,7 @@ class BehavioralRTLIRToSVVisitorL2( BehavioralRTLIRToSVVisitorL1 ):
       And : '&&', Or : '||',
       # Binary operators
       Add : '+', Sub : '-', Mult : '*', Div : '/', Mod : '%', Pow : '**',
+      # Add : '-', Sub : '-', Mult : '*', Div : '/', Mod : '%', Pow : '**',
       ShiftLeft : '<<', ShiftRightLogic : '>>', 
       BitAnd : '&', BitOr : '|', BitXor : '^',
       # Comparison operators
@@ -99,13 +100,14 @@ class BehavioralRTLIRToSVVisitorL2( BehavioralRTLIRToSVVisitorL1 ):
 
     # Assemble the statement, starting with if-body
 
-    if_begin   = 'if ({})'.format(cond) + (' begin' if len(node.body) > 1 else '')
+    # if_begin   = 'if ({})'.format(cond) + (' begin' if len(node.body) > 1 else '')
+    if_begin   = 'if ({})'.format(cond) + ' begin'
 
     src.extend( [ if_begin ] )
     src.extend( body )
     
-    if len( node.body ) > 1:
-      src.extend( [ 'end' ] )
+    # if len( node.body ) > 1:
+    src.extend( [ 'end' ] )
 
     # If orelse-body is not empty, add it to the list of strings
 
