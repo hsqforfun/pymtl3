@@ -28,7 +28,8 @@ def verilog_name( name ):
 
 def verilator_name( name ):
 
-  return verilog_name(name).replace('__', '___05F').replace('$', '__024')
+  # return verilog_name(name).replace('__', '___05F').replace('$', '__024')
+  return name.replace('__', '___05F').replace('$', '__024')
 
 #-------------------------------------------------------------------------
 # pymtl_name
@@ -347,8 +348,8 @@ def read_ffi_model_py( lhs, rhs, name, dtype ):
 
   ret = []
 
-  # rname = verilator_name( name )
-  rname = name
+  rname = verilator_name( name )
+  # rname = name
   vec_list = flatten_packed_dtype( name, dtype )
   vec_list.reverse()
 
@@ -408,7 +409,7 @@ def read_ffi_model_py( lhs, rhs, name, dtype ):
 # write_ffi_model_py
 #-------------------------------------------------------------------------
 
-def write_ffi_model_py( lhs, rhs, name, dtype ):
+def write_ffi_model_py( lhs, rhs, name, vl_name, dtype ):
 
   ret = []
 
@@ -477,7 +478,8 @@ def write_ffi_model_py( lhs, rhs, name, dtype ):
 
       ret.append(
         # (lhs+'='+rhs_str).format( name = verilator_name(name)+'[{}]'.format(lhs_pos) )
-        (lhs+'='+rhs_str).format( name = name+'[{}]'.format(lhs_pos) )
+        (lhs+'='+rhs_str).format( name = name+'[{}]'.format(lhs_pos),
+          vl_name = vl_name+'[{}]'.format( lhs_pos ) )
       )
 
       lhs_pos += 1
@@ -492,7 +494,8 @@ def write_ffi_model_py( lhs, rhs, name, dtype ):
 
     ret.append(
       # (lhs+'='+rhs_str).format(name = verilator_name(name)+'[{}]'.format(lhs_pos))
-      (lhs+'='+rhs_str).format(name = name+'[{}]'.format(lhs_pos))
+      (lhs+'='+rhs_str).format(name = name+'[{}]'.format(lhs_pos),
+          vl_name = vl_name+'[{}]'.format( lhs_pos ) )
     )
 
   return ret
@@ -539,7 +542,7 @@ def generate_seq_upblk_py( ports, ssg ):
     dtype = port_rtypes[ in_port ].get_dtype()
 
     set_inputs.extend( write_ffi_model_py(
-      's._ffi_m.{name}', 's.{name}', name, dtype
+      's._ffi_m.{vl_name}', 's.{name}', name, verilator_name(name), dtype
     ) )
 
     constraints.append( 'U(tick_sequential) < WR(s.{}),'.format( name ) )
@@ -604,7 +607,7 @@ def generate_comb_upblks_py( ports, ssg ):
       dtype = port_rtypes[ in_port ].get_dtype()
 
       set_inputs.extend( write_ffi_model_py(
-        's._ffi_m.{name}', 's.{name}', name, dtype
+        's._ffi_m.{vl_name}', 's.{name}', name, verilator_name(name), dtype
       ) )
 
       constraints.append( 'U(comb_eval_{upblk_num}) < WR(s.{name}),'.format(
