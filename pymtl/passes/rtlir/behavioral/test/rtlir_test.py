@@ -10,7 +10,7 @@ import pytest
 
 from pymtl                             import *
 from pymtl.passes.rtlir.behavioral.BehavioralRTLIR import *
-from pymtl.passes.utility.test_utility import expected_failure, do_test
+from pymtl.passes.rtlir.test_utility import expected_failure, do_test
 
 from .. import BehavioralRTLIRGenPass, BehavioralRTLIRTypeCheckPass
 from ..errors                          import PyMTLTypeError

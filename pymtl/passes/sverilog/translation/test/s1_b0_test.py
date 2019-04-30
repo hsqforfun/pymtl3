@@ -6,8 +6,10 @@
 import pytest, copy
 
 from pymtl import *
-from pymtl.passes.utility.test_utility import *
-from pymtl.passes.sverilog.import_.helpers import pymtl_name
+from pymtl.passes.rtlir.test_utility import do_test, expected_failure
+from pymtl.passes.sverilog.test_utility import gen_sim_reference,\
+                                               gen_translation_pass,\
+                                               run_sim_reference_test
 
 from ..SVRTLIRTranslator import mk_SVRTLIRTranslator
 from ..TranslationPass   import mk_TranslationPass

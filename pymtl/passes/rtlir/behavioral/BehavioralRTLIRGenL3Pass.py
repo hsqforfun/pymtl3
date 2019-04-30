@@ -10,7 +10,7 @@ import inspect
 
 from pymtl        import *
 from pymtl.passes import BasePass, PassMetadata
-from pymtl.passes.utility import is_BitsX
+from pymtl.passes.rtlir.utility import is_BitsX
 
 from errors import PyMTLSyntaxError
 from BehavioralRTLIRGenL2Pass import BehavioralRTLIRGeneratorL2

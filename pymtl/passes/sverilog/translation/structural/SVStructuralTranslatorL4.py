@@ -2,7 +2,7 @@
 # SVStructuralTranslatorL4.py
 #=========================================================================
 
-from pymtl.passes.utility import make_indent
+from pymtl.passes.sverilog.utility import make_indent
 from pymtl.passes.rtlir.translation.structural.StructuralTranslatorL4\
     import StructuralTranslatorL4
 from pymtl.passes.rtlir.RTLIRType import *

@@ -10,7 +10,7 @@
 import pymtl, __builtin__
 
 from pymtl.dsl.Connectable import Signal as pymtl_Signal
-from pymtl.passes.utility.pass_utility import make_indent
+from pymtl.passes.sverilog.utility import make_indent
 from pymtl.passes.rtlir.RTLIRType      import *
 from pymtl.passes.rtlir.structural.StructuralRTLIRSignalExpr import *
 

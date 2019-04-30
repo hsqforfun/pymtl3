@@ -10,7 +10,7 @@ import ast, copy
 
 from pymtl        import *
 from pymtl.passes import BasePass, PassMetadata
-from pymtl.passes.utility import is_BitsX
+from pymtl.passes.rtlir.utility import is_BitsX
 
 from errors     import PyMTLSyntaxError
 from BehavioralRTLIR import *

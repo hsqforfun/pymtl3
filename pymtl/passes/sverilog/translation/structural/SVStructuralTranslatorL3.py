@@ -4,7 +4,7 @@
 # The methods that are commented out were used to generate SystemVerilog
 # interface definitions.
 
-from pymtl.passes.utility import make_indent
+from pymtl.passes.sverilog.utility import make_indent
 from pymtl.passes.rtlir.translation.structural.StructuralTranslatorL3\
     import StructuralTranslatorL3
 from pymtl.passes.rtlir.RTLIRType import *

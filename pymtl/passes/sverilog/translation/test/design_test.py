@@ -11,8 +11,8 @@ import pytest
 
 from pymtl                             import *
 from pymtl.passes.sverilog             import TranslationPass, SimpleImportPass
-from pymtl.passes.utility.test_utility import do_test,\
-                                              run_translation_reference_test
+from pymtl.passes.rtlir.test_utility import do_test
+from pymtl.passes.sverilog.test_utility import run_translation_reference_test
 
 def local_do_test( m ):
 

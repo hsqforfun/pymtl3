@@ -9,7 +9,7 @@ import inspect, pymtl
 
 from collections import defaultdict, deque
 
-from pymtl.passes.utility import *
+# from pymtl.passes.utility import *
 from pymtl.passes.rtlir.RTLIRType import *
 from pymtl.passes.rtlir.structural.StructuralRTLIRGenL4Pass\
     import StructuralRTLIRGenL4Pass

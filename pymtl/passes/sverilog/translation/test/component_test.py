@@ -12,7 +12,7 @@ import pytest
 from pymtl                             import *
 from pclib.rtl                         import Adder, Subtractor
 from pymtl.passes.sverilog             import TranslationPass
-from pymtl.passes.utility.test_utility import expected_failure
+from pymtl.passes.rtlir.test_utility import expected_failure
 from pymtl.passes.rtlir.behavioral.errors import PyMTLTypeError
 
 def test_wrapped_noconnect_adder():
@@ -200,10 +200,10 @@ def test_bits_type():
           s.out = Bits4( 1 ) | Bits4( 2 )
           s.out = Bits4( 8 )
         else:
-          s.out = Bits1( 0 ) # is this an error!
+          # will be an error if enforce width checking
+          s.out = Bits1( 0 )
           s.out = Bits4( 1 )
 
-  # with expected_failure( PyMTLTypeError ):
   m = Foo_bits()
   m.elaborate()
   TranslationPass()( m )

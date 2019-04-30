@@ -9,8 +9,6 @@
 
 import inspect
 
-from pymtl.passes.utility import get_string
-
 from behavioral import BehavioralTranslator
 from structural import StructuralTranslator
 from BaseRTLIRTranslator import TranslatorMetadata

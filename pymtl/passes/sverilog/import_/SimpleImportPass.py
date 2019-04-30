@@ -12,7 +12,7 @@ import os, re, sys, shutil, linecache
 
 from pymtl            import *
 from pymtl.passes     import BasePass, PassMetadata
-from pymtl.passes.utility import collect_objs
+from pymtl.passes.rtlir.utility import collect_objs
 
 from errors import *
 from ExternalSimSetup import setup_external_sim
@@ -98,7 +98,7 @@ class SimpleImportPass( BasePass ):
     
     # Update the global namespace of `construct` so that the struct
     # classes defined previously can still be used in the imported model.
-    # This is simple-import only because you must have the live
+    # This applies to simple-import only because you must have the live
     # structs class, which is not possible in generic import.
 
     model._pass_simple_import.\

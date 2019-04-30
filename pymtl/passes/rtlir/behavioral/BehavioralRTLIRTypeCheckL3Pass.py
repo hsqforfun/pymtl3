@@ -10,7 +10,7 @@
 
 from pymtl                import *
 from pymtl.passes         import BasePass, PassMetadata
-from pymtl.passes.utility import freeze
+from pymtl.passes.rtlir.utility import freeze
 from pymtl.passes.rtlir.RTLIRType import *
 
 from BehavioralRTLIR import *

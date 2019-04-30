@@ -10,7 +10,7 @@
 
 import os
 
-from pymtl.passes.utility import make_indent
+from pymtl.passes.sverilog.utility import make_indent
 
 from helpers              import *
 

@@ -7,7 +7,7 @@
 # Author : Peitian Pan
 # Date   : March 15, 2019
 
-from pymtl.passes.utility import get_string
+from pymtl.passes.sverilog.utility import get_string
 from pymtl.passes.rtlir.translation import RTLIRTranslator
 
 from pymtl.passes.rtlir.behavioral import MinBehavioralRTLIRLevel,\

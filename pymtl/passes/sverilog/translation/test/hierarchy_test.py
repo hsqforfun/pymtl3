@@ -8,7 +8,7 @@
 # Date   : Feb 21, 2019
 
 from pymtl                             import *
-from pymtl.passes.utility.test_utility import expected_failure
+from pymtl.passes.rtlir.test_utility import expected_failure
 from pymtl.dsl.errors                  import SignalTypeError
 
 def test_deep_connection():

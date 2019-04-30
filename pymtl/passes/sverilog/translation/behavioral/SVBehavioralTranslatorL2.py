@@ -8,7 +8,7 @@
 # Date   : March 18, 2019
 
 from pymtl import *
-from pymtl.passes.utility import make_indent
+from pymtl.passes.sverilog.utility import make_indent
 from pymtl.passes.rtlir.translation.behavioral.BehavioralTranslatorL2\
     import BehavioralTranslatorL2
 from pymtl.passes.rtlir.behavioral.BehavioralRTLIR import *

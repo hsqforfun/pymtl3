@@ -10,8 +10,7 @@
 
 import inspect, copy, pymtl
 
-from pymtl.passes.utility import *
-
+from utility import collect_objs
 from RTLIRDataType import *
 
 #-------------------------------------------------------------------------

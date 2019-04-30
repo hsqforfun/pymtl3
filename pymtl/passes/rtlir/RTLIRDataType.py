@@ -12,7 +12,7 @@ import inspect, pymtl, __builtin__
 
 from pymtl.dsl.Connectable import Signal as pymtl_Signal
 from pymtl.dsl.Connectable import Const as pymtl_Const
-from pymtl.passes.utility import *
+from utility import collect_objs, is_BitsX
 
 #-------------------------------------------------------------------------
 # BaseRTLIRDataType

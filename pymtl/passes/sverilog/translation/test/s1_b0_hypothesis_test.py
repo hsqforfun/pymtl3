@@ -10,7 +10,10 @@ from   hypothesis import given, settings, HealthCheck, unlimited, seed,\
                          Verbosity, PrintSettings
 
 from pymtl import *
-from pymtl.passes.utility.test_utility import *
+from pymtl.passes.rtlir.test_utility import do_test
+from pymtl.passes.sverilog.test_utility import run_sim_reference_test,\
+                                               gen_translation_pass,\
+                                               gen_sim_reference
 from pymtl.passes.sverilog.import_.helpers import pymtl_name
 
 from ..SVRTLIRTranslator import mk_SVRTLIRTranslator

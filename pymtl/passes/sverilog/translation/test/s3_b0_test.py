@@ -6,9 +6,11 @@
 import pytest, copy
 
 from pymtl import *
-from pymtl.passes.utility import is_BitsX
-from pymtl.passes.utility.test_utility import *
-from pymtl.passes.sverilog.import_.helpers import pymtl_name
+from pymtl.passes.rtlir.utility import is_BitsX
+from pymtl.passes.rtlir.test_utility import do_test
+from pymtl.passes.sverilog.test_utility import gen_sim_reference,\
+                                               gen_translation_pass,\
+                                               run_sim_reference_test
 from pclib.ifcs.ValRdyIfc import InValRdyIfc, OutValRdyIfc
 
 from ..SVRTLIRTranslator import mk_SVRTLIRTranslator

@@ -11,7 +11,7 @@
 
 import os, shutil, subprocess, copy
 
-from pymtl.passes.utility.pass_utility import make_indent
+from pymtl.passes.sverilog.utility import make_indent
 
 from errors  import VerilatorCompilationError, PyMTLImportError
 from helpers import *

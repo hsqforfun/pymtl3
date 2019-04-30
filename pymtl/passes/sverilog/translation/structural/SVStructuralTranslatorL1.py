@@ -3,7 +3,7 @@
 #=========================================================================
 
 import pymtl
-from pymtl.passes.utility import make_indent, get_string
+from pymtl.passes.sverilog.utility import make_indent, get_string
 from pymtl.passes.rtlir.translation.structural.StructuralTranslatorL1\
     import StructuralTranslatorL1
 from pymtl.passes.rtlir.RTLIRType import *

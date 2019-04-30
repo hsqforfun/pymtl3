@@ -6,7 +6,7 @@
 # Author : Peitian Pan
 # Date   : March 18, 2019
 
-from pymtl.passes.utility import make_indent
+from pymtl.passes.sverilog.utility import make_indent
 from pymtl.passes.rtlir.translation.behavioral.BehavioralTranslatorL5\
     import BehavioralTranslatorL5
 from pymtl.passes.rtlir.behavioral.BehavioralRTLIR import Base
