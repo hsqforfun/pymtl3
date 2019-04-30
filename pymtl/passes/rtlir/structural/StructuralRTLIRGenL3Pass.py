@@ -44,6 +44,7 @@ class StructuralRTLIRGenL3Pass( StructuralRTLIRGenL2Pass ):
     if obj == signal: return True
 
     while not isinstance( signal, CurComp ):
+      if not hasattr( signal, 'get_base' ): return False
       signal = signal.get_base()
       if obj == signal:
         return True
