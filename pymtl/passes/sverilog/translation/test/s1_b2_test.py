@@ -80,8 +80,8 @@ def test_upblk_if1( do_test ):
           s.out1[0][0] = 0
 
         if s.in_2[0][0][1] == s.in_2[1][0][1]:
-          s.out1[0][1] = s.in_2[1][0][1] & s.in_2[0][0][1]
-          s.out1[1][0] = s.in_2[0][0][1] | s.in_2[1][0][1]
+          s.out1[0][1][0:1] = s.in_2[1][0][1] & s.in_2[0][0][1]
+          s.out1[1][0][0:1] = s.in_2[0][0][1] | s.in_2[1][0][1]
         else:
           s.out1[0][1] = 0
           s.out1[1][0] = 0
@@ -89,19 +89,19 @@ def test_upblk_if1( do_test ):
         if s.in_2[1][0][1] <= s.in_2[0][0][0]:
 
           if s.in_2[1][0][1] & s.in_2[1][0][0]:
-            s.out1[1][1] = Bits1(1)
+            s.out1[1][1][0:1] = Bits1(1)
             s.out1[2][0] = 1
           else:
-            s.out1[1][1] = Bits1(0)
+            s.out1[1][1][0:1] = Bits1(0)
             if Bits1(1) + 0:
               s.out1[2][0] = 1
             else:
               s.out1[2][0] = 0
 
-          s.out1[1][1] = 10
+          s.out1[1][1] = 3
         else:
-          s.out1[1][1] = Bits1(0)
-          s.out1[2][0] = Bits1(0)
+          s.out1[1][1][0:1] = Bits1(0)
+          s.out1[2][0][0:1] = Bits1(0)
           s.out1[2][1] = 1
 
   m = TestComponent()
