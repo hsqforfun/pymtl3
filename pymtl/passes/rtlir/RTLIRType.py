@@ -393,7 +393,7 @@ class Component( BaseRTLIRType ):
 
     if 'elaborate' in obj._dsl.param_dict:
 
-      kwrags.update( {
+      kwargs.update( {
         x:y for x, y in obj._dsl.param_dict['elaborate'].iteritems() if x
       } )
 

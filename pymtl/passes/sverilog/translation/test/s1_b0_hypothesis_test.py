@@ -23,9 +23,6 @@ def local_do_test( m ):
     mk_TranslationPass, mk_SVRTLIRTranslator, 1, 0
   )
 
-  # import pdb
-  # pdb.set_trace()
-
   try:
 
     for key, value in m._input_data.iteritems():
@@ -37,6 +34,7 @@ def local_do_test( m ):
     output_val =\
       gen_sim_reference( m, m._input_data, m._outport_types )
     
+    print 'output_val ready! running reference test...'
     print '---------------------------------------------'
     print output_val
     print '---------------------------------------------'
@@ -54,13 +52,24 @@ def local_do_test( m ):
       translation_pass, SimpleImportPass
     )
 
-    m._unelaborated._pass_simple_import.imported_model.finalize()
-    del m._unelaborated
-    del m
-
   except Exception as e:
-
+    print "Test failed!"
+    print 'Error = ' + str( e.args )
+    print '============================================='
     assert False, e.args
+
+  finally:
+    if hasattr( m._unelaborated, '_pass_simple_import' ):
+      if hasattr( m._unelaborated._pass_simple_import, 'imported_model' ):
+        print 'Finalizing shared lib...'
+        m._unelaborated._pass_simple_import.imported_model.finalize()
+        print 'Done!'
+        del m._unelaborated
+        del m
+      else:
+        print 'Import pass failed to bring in the model!'
+    else:
+      print 'Import pass is not executed, no need to cleanup!'
 
   print "Test passed!"
   print '============================================='
@@ -74,7 +83,7 @@ def array_type( draw, obj_type ):
 
   obj = draw( obj_type )
   obj_str = obj[0]
-  length = draw( st.integers( min_value = 1, max_value = 10 ) )
+  length = draw( st.integers( min_value = 1, max_value = 3 ) )
   Type = { 'Type' : 'Array', 'length' : length, 'subtype' : obj[1] }
 
   return\
@@ -111,7 +120,7 @@ def array_data( draw, name, signal_type, n_cases ):
 @st.composite
 def vector_type( draw, direction ):
 
-  width = draw( st.integers( min_value = 1, max_value = 128 ) )
+  width = draw( st.integers( min_value = 1, max_value = 64 ) )
   Bits_type = eval('Bits{}'.format(width))
   Type = { 'Type' : 'Vector', 'nbits' : width, 'Bits' : Bits_type }
 
@@ -137,7 +146,6 @@ def vector_data( draw, name, signal_type, n_cases ):
   Bits_type = eval('Bits{}'.format(signal_type['nbits']))
 
   return { name : ( values, Bits_type ) }
-  # return { name : value }
 
 #-------------------------------------------------------------------------
 # signal
@@ -146,8 +154,11 @@ def vector_data( draw, name, signal_type, n_cases ):
 def signal( direction ):
 
   return st.one_of(
-    array_type( st.deferred( lambda: signal( direction=direction ) ) ),
-    vector_type( direction=direction )
+    # array_type( st.deferred( lambda: signal( direction=direction ) ) ),
+    vector_type( direction=direction ),
+    array_type(vector_type(direction = direction)),
+    array_type(array_type(vector_type(direction = direction))),
+    array_type(array_type(array_type(vector_type(direction = direction))))
   )
 
 #-------------------------------------------------------------------------
@@ -182,7 +193,7 @@ def inport_data( draw, signal_type ):
 #-------------------------------------------------------------------------
 
 @st.composite
-def inport( draw, port_num, port_type=signal( direction="InVPort" ) ):
+def inport( draw, port_num, port_type=signal( direction="InPort" ) ):
 
   inport_type = draw( port_type )
   inport_type_str = inport_type[0]
@@ -199,7 +210,7 @@ def inport( draw, port_num, port_type=signal( direction="InVPort" ) ):
 #-------------------------------------------------------------------------
 
 @st.composite
-def outport( draw, port_num, port_type=signal( direction="OutVPort" ) ):
+def outport( draw, port_num, port_type=signal( direction="OutPort" ) ):
 
   outport_type = draw( port_type )
   outport_type_str = outport_type[0]
@@ -216,6 +227,8 @@ def vector_self( draw, signal_type ):
 
   return ( '', signal_type )
 
+# The vector-slicing strategy is not used because it might cause conflicts
+# with the slicing operations performed during assignment...
 @st.composite
 def vector_slice( draw, signal_type ):
 
@@ -226,14 +239,21 @@ def vector_slice( draw, signal_type ):
 
   Type = { 'Type' : 'Vector', 'nbits' : stop-start }
 
-  rest = draw( signal_exp( signal_type = Type ) )
-  rest_str = rest[0]
-
+  # Indexing/slicing over sliced vector is not allowed
   return\
     (
-      '[{start}:{stop}]{rest_str}'.format( **locals() ),
-      rest[1]
+      '[{start}:{stop}]'.format( **locals() ),
+      Type
     )
+
+  # rest = draw( signal_exp( signal_type = Type ) )
+  # rest_str = rest[0]
+
+  # return\
+    # (
+      # '[{start}:{stop}]{rest_str}'.format( **locals() ),
+      # rest[1]
+    # )
 
 @st.composite
 def vector_index( draw, signal_type ):
@@ -244,14 +264,21 @@ def vector_index( draw, signal_type ):
 
   Type = { 'Type' : 'Vector', 'nbits' : 1 }
 
-  rest = draw( signal_exp( signal_type = Type ) )
-  rest_str = rest[0]
-
+  # Indexing/slicing over indexed vector is not allowed
   return\
     (
-      '[{idx}]{rest_str}'.format( **locals() ),
-      rest[1]
+      '[{idx}]'.format( **locals() ),
+      Type
     )
+
+  # rest = draw( signal_exp( signal_type = Type ) )
+  # rest_str = rest[0]
+
+  # return\
+    # (
+      # '[{idx}]{rest_str}'.format( **locals() ),
+      # rest[1]
+    # )
 
 @st.composite
 def signal_exp( draw, signal_type ):
@@ -274,7 +301,7 @@ def signal_exp( draw, signal_type ):
 
     return draw( st.one_of(
       vector_self( signal_type=signal_type ),
-      vector_slice( signal_type=signal_type ),
+      # vector_slice( signal_type=signal_type ),
       vector_index( signal_type=signal_type )
     ) )
 
@@ -420,10 +447,11 @@ class TestComponent( Component ):
 
   inport_data = {}
   for i, _inport in enumerate(inports):
-    inport_data.update( draw(
-      signal_data( name='in_'+str(i), signal_type=_inport[1],
-        n_cases=n_cases ) ) 
-    )
+    inport_data.update( draw( signal_data(
+      name = 'in_'+str(i),
+      signal_type = _inport[1],
+      n_cases = n_cases
+    ) ) )
 
   input_data = ""
   # for name, value in inport_data.iteritems():
@@ -517,7 +545,7 @@ class TestComponent( Component ):
 
 @given( component_str=S1_B0_ComponentStrategy() )
 @settings( deadline = None, suppress_health_check = HealthCheck.all(),
-  verbosity=Verbosity.verbose, print_blob=PrintSettings.ALWAYS,
+  # verbosity=Verbosity.verbose, print_blob=PrintSettings.ALWAYS,
   max_examples=10
 )
 def test_s1_b0_hypothesis( do_test, component_str ):
@@ -525,25 +553,22 @@ def test_s1_b0_hypothesis( do_test, component_str ):
   component_src, input_data, outport_types = component_str
 
   print '============================================='
+  print 'component_src and input_data ready!'
   print component_src
   print input_data
 
   if not os.getcwd() in sys.path:
-
     sys.path.append( os.getcwd() )
 
   with open( 'TestComponent.py', 'w' ) as output:
-
     output.write( component_src )
 
   if 'TestComponent' in sys.modules:
-
     linecache.checkcache()
     _TestComponent = reload( sys.modules[ 'TestComponent' ] )
     TestComponent = _TestComponent.__dict__[ 'TestComponent' ]
 
   else:
-
     from TestComponent import TestComponent
 
   m = TestComponent()
