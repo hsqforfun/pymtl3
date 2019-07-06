@@ -355,8 +355,7 @@ class Component( BaseRTLIRType ):
     return s.unpacked
 
   def __eq__( s, other ):
-    return isinstance(other, Component) and s.name == other.name and \
-           s.params == other.params
+    return isinstance(other, Component) and s.name == other.name
 
   def __hash__( s ):
     return hash((type(s), s.name, tuple(s.params)))
@@ -481,10 +480,7 @@ def _handle_Array( _id, _obj ):
       return None
     dim_sizes.append( len( obj ) )
     obj = obj[0]
-  if isinstance( obj, ( int, Bits ) ):
-    return Array( dim_sizes, get_rtlir( obj ), _obj )
-  else:
-    return Array( dim_sizes, get_rtlir( obj ) )
+  return Array( dim_sizes, get_rtlir( obj ), _obj )
 
 def _handle_InPort( p_id, obj ):
   return Port( 'input', rdt.get_rtlir_dtype( obj ) )

@@ -131,9 +131,9 @@ class YosysStructuralTranslatorL4(
       "connections" : "\n".join( conns )
     }
 
-  def rtlir_tr_subcomp_decl( s, m, c_id, c_rtype, c_array_type, port_conns, ifc_conns ):
+  def rtlir_tr_subcomp_decl( s, m, c_id, c_rtype, c_rtype_all, c_array_type, port_conns, ifc_conns ):
 
-    def _subcomp_port_gen( c_name, c_id, n_dim, port_decls ):
+    def _subcomp_port_gen( c_rtype_all, c_id, n_dim, port_decls ):
       p_wire_tplt = "logic {packed_type: <8} {id_};"
       p_conn_tplt = ".{port_id: <15}( {port_wire_id} )"
       template = \
@@ -157,13 +157,15 @@ class YosysStructuralTranslatorL4(
           p_conns.append( p_conn_tplt.format( **locals() ) )
         make_indent( p_wires, 1 )
         make_indent( p_conns, 2 )
+        c_name = s.rtlir_tr_component_unique_name( c_rtype_all )
         port_wires = "\n".join( p_wires )
         port_conn_decls = ",\n".join( p_conns )
         return [ template.format( **locals() ) ]
       else:
         ret = []
         for i in range( n_dim[0] ):
-          ret += _subcomp_port_gen( c_name, c_id+"$__"+str(i), n_dim[1:], port_decls )
+          _c = c_rtype_all[i]
+          ret += _subcomp_port_gen( _c, c_id+"$__"+str(i), n_dim[1:], port_decls )
         return ret
 
     def _subcomp_conn_gen( d, cpid, _pid, cwid, _wid, idx, n_dim ):
@@ -203,8 +205,7 @@ class YosysStructuralTranslatorL4(
     c_n_dim = c_array_type["n_dim"]
 
     # Add sub-component info to port declarations and generate declarations
-    c_name = s.rtlir_tr_component_unique_name( c_rtype )
-    port_decls = _subcomp_port_gen( c_name, c_id, c_n_dim, _port_decls )
+    port_decls = _subcomp_port_gen( c_rtype_all, c_id, c_n_dim, _port_decls )
 
     # Add sub-component info to wire declarations and generate declarations
     for wire in _wire_decls:
