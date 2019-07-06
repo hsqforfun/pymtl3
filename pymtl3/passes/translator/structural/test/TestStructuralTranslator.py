@@ -155,7 +155,7 @@ def mk_TestStructuralTranslator( _StructuralTranslator ):
         decls += '\n' + '\n'.join( decl )
       return 'component_decls:{}\n'.format( decls )
 
-    def rtlir_tr_subcomp_decl( s, m, c_id, c_rtype, c_array_type, port_conns, ifc_conns ):
+    def rtlir_tr_subcomp_decl( s, m, c_id, c_rtype, c_rtype_all, c_array_type, port_conns, ifc_conns ):
       c_rtype = repr(c_rtype) if not c_array_type else c_array_type
       ret = ['component_decl: {c_id} {c_rtype}'.format(**locals())]
       for port in port_conns:

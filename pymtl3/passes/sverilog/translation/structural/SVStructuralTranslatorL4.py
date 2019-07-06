@@ -103,11 +103,9 @@ class SVStructuralTranslatorL4(
     subcomp_decls = reduce( lambda res, l: res+l, subcomps, [] )
     return '\n\n'.join( subcomp_decls )
 
-  def rtlir_tr_subcomp_decl( s, m, c_id, c_rtype, c_array_type, port_conns, ifc_conns ):
+  def rtlir_tr_subcomp_decl( s, m, c_id, c_rtype, c_rtype_all, c_array_type, port_conns, ifc_conns ):
 
-    _c_name = s.rtlir_tr_component_unique_name( c_rtype )
-
-    def gen_subcomp_array_decl( c_id, port_conns, ifc_conns, n_dim, c_n_dim ):
+    def gen_subcomp_array_decl( c_id, c_rtype_all, port_conns, ifc_conns, n_dim, c_n_dim ):
       tplt = \
 """\
 {port_wire_defs}{ifc_inst_defs}
@@ -120,7 +118,7 @@ class SVStructuralTranslatorL4(
       if not n_dim:
         # Add the component dimension to the defs/decls
         c_id = c_id + c_n_dim
-        c_name = _c_name
+        c_name = s.rtlir_tr_component_unique_name( c_rtype_all )
         port_wire_defs = port_conns['def'].format( **locals() )
         ifc_inst_defs = ifc_conns['def'].format( **locals() )
         if port_wire_defs and ifc_inst_defs:
@@ -133,7 +131,7 @@ class SVStructuralTranslatorL4(
 
       else:
         return reduce( lambda res, l: res+l, map(
-          lambda idx: gen_subcomp_array_decl( c_id,
+          lambda idx: gen_subcomp_array_decl( c_id, c_rtype_all[idx],
             port_conns, ifc_conns, n_dim[1:], c_n_dim+'$__'+str(idx) ),
           range( n_dim[0] )
         ), [] )
@@ -146,7 +144,7 @@ class SVStructuralTranslatorL4(
     if port_conns['decl'] and ifc_conns['decl']:
       port_conns['decl'] += ','
     return\
-      gen_subcomp_array_decl( c_id, port_conns, ifc_conns, n_dim, '' )
+      gen_subcomp_array_decl( c_id, c_rtype_all, port_conns, ifc_conns, n_dim, '' )
 
   #-----------------------------------------------------------------------
   # Signal operations

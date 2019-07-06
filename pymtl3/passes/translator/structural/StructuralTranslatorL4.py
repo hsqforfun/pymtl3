@@ -48,6 +48,16 @@ class StructuralTranslatorL4( StructuralTranslatorL3 ):
 
   # Override
   def translate_decls( s, m ):
+
+    def get_all_rtypes( lst ):
+      if isinstance( lst, list ):
+        ret = []
+        for lst_element in lst:
+          ret.append( get_all_rtypes( lst_element ) )
+        return ret
+      else:
+        return rt.get_rtlir( lst )
+
     super( StructuralTranslatorL4, s ).translate_decls( m )
     m_rtype = m._pass_structural_rtlir_gen.rtlir_type
 
@@ -57,9 +67,11 @@ class StructuralTranslatorL4( StructuralTranslatorL3 ):
       if isinstance( _c_rtype, rt.Array ):
         c_array_rtype = _c_rtype
         c_rtype = _c_rtype.get_sub_type()
+        c_rtype_all = get_all_rtypes( _c_rtype.get_obj() )
       else:
         c_array_rtype = None
         c_rtype = _c_rtype
+        c_rtype_all = c_rtype
 
       # Translate ports of the subcomponent
       port_conns, ifc_conns = [], []
@@ -120,7 +132,7 @@ class StructuralTranslatorL4( StructuralTranslatorL3 ):
       # Generate a list of ports and interfaces
       subcomp_decls.append( s.rtlir_tr_subcomp_decl(
         m,
-        c_id, c_rtype, s.rtlir_tr_unpacked_array_type( c_array_rtype ),
+        c_id, c_rtype, c_rtype_all, s.rtlir_tr_unpacked_array_type( c_array_rtype ),
         s.rtlir_tr_subcomp_port_decls( port_conns ),
         s.rtlir_tr_subcomp_ifc_decls( ifc_conns )
       ) )
@@ -179,7 +191,7 @@ class StructuralTranslatorL4( StructuralTranslatorL3 ):
   def rtlir_tr_subcomp_decls( s, subcomps ):
     raise NotImplementedError()
 
-  def rtlir_tr_subcomp_decl( s, m, c_id, c_rtype, c_array_type, port_conns, ifc_conns ):
+  def rtlir_tr_subcomp_decl( s, m, c_id, c_rtype, c_rtype_all, c_array_type, port_conns, ifc_conns ):
     raise NotImplementedError()
 
   # Signal operations
