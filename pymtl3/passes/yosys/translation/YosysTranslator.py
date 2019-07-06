@@ -85,7 +85,7 @@ endmodule
 
     if p_port_wires or i_port_wires:
       if p_port_wires and i_port_wires:
-        p_port_wires += ",\n"
+        p_port_wires += "\n"
       i_port_wires += "\n"
     port_wires = p_port_wires + i_port_wires
     if port_wires:
@@ -148,7 +148,7 @@ endmodule
 
     if p_conns or i_conns:
       if p_conns and i_conns:
-        p_conns += ",\n"
+        p_conns += "\n"
       i_conns += "\n"
     port_connections = p_conns + i_conns
     connections = port_connections \
