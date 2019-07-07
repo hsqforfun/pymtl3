@@ -453,3 +453,158 @@ module A
 endmodule
 """
   do_test( a )
+
+def test_set_param( do_test ):
+  class Dummy( Component ):
+    def construct( s, n = 0 ):
+      s.out = OutPort( Bits32 )
+      s.connect( s.out, n )
+  class A( Component ):
+    def construct( s ):
+      s.comp = [ Dummy() for i in range(2) ]
+      s.out0 = OutPort( Bits32 )
+      s.out1 = OutPort( Bits32 )
+      s.connect( s.out0, s.comp[0].out )
+      s.connect( s.out1, s.comp[1].out )
+  a = A()
+  a.set_param( "top.comp[1].construct", n=2 )
+  a._ref_src = \
+"""
+module Dummy__n_0
+(
+  input logic [0:0] clk,
+  output logic [31:0] out,
+  input logic [0:0] reset
+);
+
+  assign out = 32'd0;
+
+endmodule
+
+module Dummy__n_2
+(
+  input logic [0:0] clk,
+  output logic [31:0] out,
+  input logic [0:0] reset
+);
+
+  assign out = 32'd2;
+
+endmodule
+
+
+module A
+(
+  input logic [0:0] clk,
+  output logic [31:0] out0,
+  output logic [31:0] out1,
+  input logic [0:0] reset
+);
+  logic [0:0] comp$__0$clk;
+  logic [31:0] comp$__0$out;
+  logic [0:0] comp$__0$reset;
+
+  Dummy__n_0 comp$__0
+  (
+    .clk( comp$__0$clk ),
+    .out( comp$__0$out ),
+    .reset( comp$__0$reset )
+  );
+
+  logic [0:0] comp$__1$clk;
+  logic [31:0] comp$__1$out;
+  logic [0:0] comp$__1$reset;
+
+  Dummy__n_2 comp$__1
+  (
+    .clk( comp$__1$clk ),
+    .out( comp$__1$out ),
+    .reset( comp$__1$reset )
+  );
+
+  assign comp$__1$clk = clk;
+  assign comp$__1$reset = reset;
+  assign comp$__0$clk = clk;
+  assign comp$__0$reset = reset;
+
+  assign out0 = comp$__0$out;
+  assign out1 = comp$__1$out;
+
+endmodule
+"""
+  a._ref_src_yosys = \
+"""
+module B__Type_Bits1
+(
+  input logic [0:0] clk,
+  output logic [31:0] out,
+  input logic [0:0] reset
+);
+
+endmodule
+
+module B__Type_Bits2
+(
+  input logic [0:0] clk,
+  output logic [31:0] out,
+  input logic [0:0] reset
+);
+
+endmodule
+
+
+module A
+(
+  input logic [0:0] clk,
+  output logic [31:0] out,
+  input logic [0:0] reset
+);
+  logic [0:0] comp$clk [0:1];
+  logic [31:0] comp$out [0:1];
+  logic [0:0] comp$reset [0:1];
+  logic [0:0] comp$__0$clk;
+  logic [31:0] comp$__0$out;
+  logic [0:0] comp$__0$reset;
+
+  B__Type_Bits1 comp$__0
+  (
+    .clk( comp$__0$clk ),
+    .out( comp$__0$out ),
+    .reset( comp$__0$reset )
+  );
+
+  logic [0:0] comp$__1$clk;
+  logic [31:0] comp$__1$out;
+  logic [0:0] comp$__1$reset;
+
+  B__Type_Bits2 comp$__1
+  (
+    .clk( comp$__1$clk ),
+    .out( comp$__1$out ),
+    .reset( comp$__1$reset )
+  );
+  assign comp$__0$clk = comp$clk[0];
+  assign comp$__1$clk = comp$clk[1];
+  assign comp$out[0] = comp$__0$out;
+  assign comp$out[1] = comp$__1$out;
+  assign comp$__0$reset = comp$reset[0];
+  assign comp$__1$reset = comp$reset[1];
+
+  // PYMTL SOURCE:
+  //
+  // @s.update
+  // def upblk():
+  //   s.out = s.comp[1].out
+
+  always_comb begin : upblk
+    out = comp$out[1];
+  end
+
+  assign comp$clk[1] = clk;
+  assign comp$reset[1] = reset;
+  assign comp$clk[0] = clk;
+  assign comp$reset[0] = reset;
+
+endmodule
+"""
+  do_test( a )

@@ -140,7 +140,7 @@ class StructuralTranslatorL1( BaseRTLIRTranslator ):
     This method will be recursively applied to different components in the
     hierarchy.
     """
-    m_rtype = m._pass_structural_rtlir_gen.rtlir_type
+    m_rtype = rt.get_rtlir( m )
     s.structural.component_file_info[m] = m_rtype.get_file_info()
     s.structural.component_name[m] = m_rtype.get_name()
     s.structural.component_unique_name[m] = \

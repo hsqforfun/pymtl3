@@ -41,6 +41,8 @@ class Component( ComponentLevel7 ):
           more_args = s._dsl.param_tree.leaf[ "construct" ]
           kwargs.update( more_args )
 
+      s._dsl.kwargs = kwargs
+
       s._handle_decorated_methods()
 
       # Same as parent class _construct
