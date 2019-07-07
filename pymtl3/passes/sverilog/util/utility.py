@@ -7,6 +7,8 @@
 
 from __future__ import absolute_import, division, print_function
 
+from pymtl3.passes.rtlir.util.utility import get_component_full_name
+
 
 def make_indent( src, nindent ):
   """Add nindent indention to every line in src."""
@@ -16,15 +18,11 @@ def make_indent( src, nindent ):
 
 def get_component_unique_name( c_rtype ):
 
-  def get_string( obj ):
-    """Return the string that identifies `obj`"""
-    if isinstance(obj, type): return obj.__name__
-    return str( obj )
+  full_name = get_component_full_name( c_rtype )
+
+  if len(full_name) < 64:
+    return full_name
 
   comp_name = c_rtype.get_name()
-  comp_params = c_rtype.get_params()
-  assert comp_name
-  for arg_name, arg_value in comp_params:
-    assert arg_name != ''
-    comp_name += '__' + arg_name + '_' + get_string(arg_value)
-  return comp_name
+  param_name = str(abs(hash(full_name[len(comp_name):])))
+  return comp_name + "__" + param_name
