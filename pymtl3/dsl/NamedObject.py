@@ -183,6 +183,7 @@ class NamedObject(object):
           more_args = s._dsl.param_tree.leaf[ "construct" ]
           kwargs.update( more_args )
 
+      s._dsl.kwargs = kwargs
       s.construct( *s._dsl.args, **kwargs )
 
       s._dsl.constructed = True

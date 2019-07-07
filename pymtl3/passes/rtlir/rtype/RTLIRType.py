@@ -346,7 +346,7 @@ class Component( BaseRTLIRType ):
     assert num_args == num_supplied or num_args <= num_supplied + num_defaults, \
         "internal error: fail to parse the arguments!"
     use_defaults = num_args != num_supplied
-
+    
     ret = []
     # Handle method construct arguments
     for idx, arg_name in enumerate(arg_names):
